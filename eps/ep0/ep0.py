@@ -182,8 +182,31 @@ def is_well_formed(filename):
     .. seealso::
         Vide enunciado para mais exemplos
     """
-    raise NotImplementedError  # NÃO SE ESQUEÇA DE APAGAR ESSA LINHA!
 
+    file = open(filename, 'r')
+
+    content = file.read()
+    stack = []
+    open_symbols = {'(': 1, '[': 2, '{': 3}
+    closing_symbols = {')': 1, ']': 2, '}': 3}
+
+    for char in content:
+        if char in open_symbols:
+            stack.append(char)
+            print(stack)
+        elif char in closing_symbols:
+            try:
+                opens = stack.pop()
+                closes = char
+                if open_symbols[opens] != closing_symbols[closes]:
+                    return False
+            except:
+                return False # caught IndexError, empty list
+
+    if len(stack) > 0:
+        return False
+
+    return True
 
 # ----------------------------------------------------------
 # --                  FIM DA PARTE 2                      --
@@ -241,10 +264,10 @@ def main():
     #r1 = compute_word_freq('war_and_peace.txt')
     #for w in r1:
     #    print(w, r1[w])
-    r2 = compute_phrase_freq('simple_corpus.txt')
-    for p in r2:
-        print(p, r2[p])
-    #r3 = is_well_formed('test_parentheses01.txt')
+    #r2 = compute_phrase_freq('simple_corpus.txt')
+    #for p in r2:
+    #    print(p, r2[p])
+    #r3 = is_well_formed('simple_parentheses1.txt')
     #print(r3)
     print('********************')
     my_problem = SimpleProblem()  # Inicializa SimpleProblem default
