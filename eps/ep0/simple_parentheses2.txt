@@ -1,0 +1,7 @@
+#include <stdio.h>
+
+int main(int argc, char** argv)
+{
+   // printf() print the string inside quotation
+   printf("Hello, World!");
+   return 0;
