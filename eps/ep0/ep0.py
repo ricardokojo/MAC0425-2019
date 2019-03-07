@@ -31,9 +31,22 @@
   https://stackoverflow.com/questions/7409780/reading-entire-file-in-python
   https://stackoverflow.com/questions/19894478/regex-punctuation-split-python
   https://stackoverflow.com/questions/3845423/remove-empty-strings-from-a-list-of-strings
+  https://stackoverflow.com/questions/2052390/manually-raising-throwing-an-exception-in-python
+
+  Para a parte 2:
+  None
+
+  Para a parte 3:
+  - Referências para uso de PriorityQueues:
+  https://docs.python.org/3/library/queue.html
+  https://docs.python.org/3/library/heapq.html
+  https://www.bogotobogo.com/python/python_PriorityQueue_heapq_Data_Structure.php
 """
 import random
 import math
+
+import itertools
+import queue
 import re
 from string import punctuation
 
@@ -193,7 +206,6 @@ def is_well_formed(filename):
     for char in content:
         if char in open_symbols:
             stack.append(char)
-            print(stack)
         elif char in closing_symbols:
             try:
                 opens = stack.pop()
@@ -247,7 +259,23 @@ def uniform_cost_search(problem):
     .. seealso::
         Vide enunciado para mais exemplos dos objetos node e problem
     """
-    raise NotImplementedError  # NÃO SE ESQUEÇA DE APAGAR ESSA LINHA!
+    counter = itertools.count()
+
+    frontier = queue.PriorityQueue()
+    frontier.put((0, counter, Node(problem.start(), 0)))
+    explored = set([])
+
+    while not frontier.empty():
+        node = frontier.get()[2] # remove no' mais recente na fronteira
+        explored.add(node.state)
+        if problem.is_goal_state(node.state):
+            return node
+        for action in problem.actions(node.state):
+            next_state = problem.next_state(node.state, action)
+            if next_state not in explored:
+                cost = problem.cost(node.state, action) + node.cost
+                frontier.put((cost, next(counter), Node(next_state, cost, node, action)))
+    return None
 
 
 # ----------------------------------------------------------
@@ -271,7 +299,7 @@ def main():
     #print(r3)
     print('********************')
     my_problem = SimpleProblem()  # Inicializa SimpleProblem default
-    my_sol = depth_first_search(my_problem)  # Tenta resolver usando dfs
+    my_sol = uniform_cost_search(my_problem)  # Tenta resolver usando dfs
     valid_sol, steps = check_solution(my_sol, my_problem)  # checa solucao
     if valid_sol:
         print(steps)
@@ -288,7 +316,7 @@ def main():
     # -------------
     my_problem2 = EightPuzzle((1, 2, 3, 4, 5, 6, 0, 7, 8))
     # Tenta resolver usando dfs
-    my_sol2 = depth_first_search(my_problem2)
+    my_sol2 = uniform_cost_search(my_problem2)
     # Checa solucao
     valid_sol2, steps2 = check_solution(my_sol2, my_problem2)
     if valid_sol2:
@@ -303,7 +331,7 @@ def main():
     # | X |   |   |  Os custos sao computados aleatoriamente
     # -------------
     my_problem3 = GridWorld(2, 3, (0, 0), (1, 1))
-    my_sol3 = depth_first_search(my_problem3)
+    my_sol3 = uniform_cost_search(my_problem3)
     valid_sol3, steps3 = check_solution(my_sol3, my_problem3)
     if valid_sol3:
         print(steps3)

@@ -212,16 +212,16 @@ def run_tests():
     try:
         P1 = EightPuzzle((1, 2, 3, 4, 5, 0, 7, 8, 6))
         res = uniform_cost_search(P1)
-        valid_sol, steps = check_solution(my_sol, my_problem)  # checa solucao
+        valid_sol, steps = check_solution(res, P1)  # checa solucao
         if valid_sol:
             if len(steps) == 2 and steps[1] == 'DOWN':
-                test_result += 1
+                test_results += 1
         P2 = GridWorld(5, 5, (0, 0), (2, 2))
         res2 = uniform_cost_search(P2)
         valid_sol2, steps2 = check_solution(res2, P2)
         if valid_sol2:
             if len(steps2) == 5:
-                test_result += 1
+                test_results += 1
     except IOError as e:
         print('Error!')
         print('Problems in uniform_cost_search')
