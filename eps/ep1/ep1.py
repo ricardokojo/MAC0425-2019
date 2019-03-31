@@ -13,8 +13,8 @@
   ENTENDO QUE EPS SEM ASSINATURA NAO SERAO CORRIGIDOS E,
   AINDA ASSIM, PODERAO SER PUNIDOS POR DESONESTIDADE ACADEMICA.
 
-  Nome :
-  NUSP :
+  Nome : RICARDO HIDEKI HANGAI KOJO
+  NUSP : 10295429
 
   Referencias: Com excecao das rotinas fornecidas no enunciado
   e em sala de aula, caso voce tenha utilizado alguma referencia,
@@ -25,6 +25,11 @@
   - O algoritmo Quicksort foi baseado em:
   https://pt.wikipedia.org/wiki/Quicksort
   http://www.ime.usp.br/~pf/algoritmos/aulas/quick.html
+
+  - Modelos de problemas do EP0, para entender a interface Problem
+  suas funções;
+  - Regex: https://regex101.com
+  - Python Sets: https://www.w3schools.com/python/python_sets.asp
 """
 
 import util
@@ -39,41 +44,61 @@ class SegmentationProblem(util.Problem):
 
     def isState(self, state):
         """ Metodo que implementa verificacao de estado """
-        raise NotImplementedError
+        if isinstance(state, int) and state <= len(self.query):
+            return True
+        return False
 
     def initialState(self):
         """ Metodo que implementa retorno da posicao inicial """
-        raise NotImplementedError
+        return 0
 
     def actions(self, state):
         """ Metodo que implementa retorno da lista de acoes validas
         para um determinado estado
         """
-        raise NotImplementedError
+        valid = [str(i) for i in range(state + 1, len(self.query) + 1)]
+        return valid
 
     def nextState(self, state, action):
         """ Metodo que implementa funcao de transicao """
-        raise NotImplementedError
+        if action not in self.actions(state):
+            raise ValueError('Invalid action')
+        return int(action)
 
     def isGoalState(self, state):
         """ Metodo que implementa teste de meta """
-        raise NotImplementedError
+        return state >= len(self.query)
 
     def stepCost(self, state, action):
         """ Metodo que implementa funcao custo """
-        raise NotImplementedError
+        if action in self.actions(state):
+            cut_index = int(action)
+            return self.unigramCost(self.query[state:cut_index])
+        return None
+        
 
 
 def segmentWords(query, unigramCost):
-
     if len(query) == 0:
         return ''
      
     # BEGIN_YOUR_CODE 
     # Voce pode usar a função getSolution para recuperar a sua solução a partir do no meta
     # valid,solution  = util.getSolution(goalNode,problem)
+    problem = SegmentationProblem(query, unigramCost)
+    goal = util.uniformCostSearch(problem)
+    valid, solution = util.getSolution(goal, problem)
 
-    raise NotImplementedError
+    words = []
+
+    if valid:
+        actions = [0] + [int(a) for a in solution.strip(' ').split(' ')]
+        for i in range(0, len(actions) - 1):
+            word = query[actions[i]:actions[i+1]]
+            words.append(word)
+        return ' '.join(words)
+    return None
+
 
     # END_YOUR_CODE
 
@@ -88,29 +113,40 @@ class VowelInsertionProblem(util.Problem):
 
     def isState(self, state):
         """ Metodo  que implementa verificacao de estado """
-        raise NotImplementedError
+        if isinstance(state, tuple) and isinstance(state[0], int) and isinstance(state[1], str):
+            if (state[0] < len(self.queryWords)):
+                return True
+        return False
 
     def initialState(self):
         """ Metodo  que implementa retorno da posicao inicial """
-        raise NotImplementedError
+        return (0, util.SENTENCE_BEGIN)
 
     def actions(self, state):
         """ Metodo  que implementa retorno da lista de acoes validas
         para um determinado estado
         """
-        raise NotImplementedError
+        word = self.queryWords[state[0]]
+        valid = list(self.possibleFills(word))
+        if valid:
+            return valid
+        return [word]
 
     def nextState(self, state, action):
         """ Metodo que implementa funcao de transicao """
-        raise NotImplementedError
+        if action in self.actions(state):
+            return (state[0] + 1, action)
+        return None
 
     def isGoalState(self, state):
         """ Metodo que implementa teste de meta """
-        raise NotImplementedError
+        return state[0] == len(self.queryWords)
 
     def stepCost(self, state, action):
         """ Metodo que implementa funcao custo """
-        raise NotImplementedError
+        if action in self.actions(state):
+            return self.bigramCost(state[1], action)
+        return None
 
 
 
@@ -118,7 +154,14 @@ def insertVowels(queryWords, bigramCost, possibleFills):
     # BEGIN_YOUR_CODE 
     # Voce pode usar a função getSolution para recuperar a sua solução a partir do no meta
     # valid,solution  = util.getSolution(goalNode,problem)
-    raise NotImplementedError
+    problem = VowelInsertionProblem(queryWords, bigramCost, possibleFills)
+    goal = util.uniformCostSearch(problem)
+    valid, solution = util.getSolution(goal, problem)
+
+    if valid:
+        return solution
+
+    return None
     # END_YOUR_CODE
 
 ############################################################
@@ -146,14 +189,13 @@ def main():
     lhe dar uma ideia de como instanciar e chamar suas funcoes.
     Descomente as linhas que julgar conveniente ou crie seus proprios testes.
     """
-    # unigramCost, bigramCost, possibleFills  =  getRealCosts()
+    unigramCost, bigramCost, possibleFills  =  getRealCosts()
     
-    # resulSegment = segmentWords('believeinyourselfhavefaithinyourabilities', unigramCost)
-    # print(resulSegment)
-    
+    resulSegment = segmentWords('believeinyourselfandinyourabilitiesbelieveinyourselfandinyourabilitiesbelieveinyourselfandinyourabilitiesbelieveinyourselfandinyourabilitiesbelieveinyourselfandinyourabilitiesbelieveinyourselfandinyourabilities', unigramCost)
+    print(resulSegment)
 
-    # resultInsert = insertVowels('smtms ltr bcms nvr'.split(), bigramCost, possibleFills)
-    # print(resultInsert)
+    resultInsert = insertVowels('wld lk t hv mr lttrs'.split(), bigramCost, possibleFills)
+    print(resultInsert)
 
 if __name__ == '__main__':
     main()
