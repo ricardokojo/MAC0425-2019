@@ -40,40 +40,49 @@ class RandomAgent(util.Agent):
         super().__init__(**kwargs)
 
     def _get_player_position(self, grid):
-        # print("{} looking for {}".format(grid, self.player_number))
-        for i in range(len(grid)):
-            # print(grid[i])
-            if self.player_number in grid[i]:
-                return i, grid[i].index(self.player_number)
+        player_numbers = [1, 8]
+        if self.player_number == 2:
+            player_numbers = [2, 9]
+
+        height = len(grid)
+        width = len(grid[0])
+
+        for i in range(height):
+            for j in range(width):
+                if grid[i][j] in player_numbers:
+                    return i, j
 
     def get_action(self, perception):
         total_actions = ['STOP']
-        GAS_STATION = 4
-        OBSTACLES = [1, 2, 5]  # other agent or building
+        IN_GAS_STATION = [8, 9]
+
+        OBSTACLES = [2, 5, 9]  # other agent or building
+        if self.player_number == 2:
+            OBSTACLES = [1, 5, 8]
+
         GRID = perception[0]
-        # print("{} type {}".format(perception, type(GRID)))
+        REMAINING_FUEL = perception[1]
 
         # get player's position
         i, j = self._get_player_position(GRID)
-        # print("{} POSITION IS ({}, {})".format(self.player_number, agent_i, agent_j))
 
-        # check if UP is valid
-        if i - 1 >= 0 and GRID[i-1][j] not in OBSTACLES:
-            total_actions.append('UP')
-        # check if DOWN is valid
-        if i + 1 <= len(GRID) - 1 and GRID[i+1][j] not in OBSTACLES:
-            total_actions.append('DOWN')
-        # check if LEFT is valid
-        if j - 1 >= 0 and GRID[i][j-1] not in OBSTACLES:
-            total_actions.append('LEFT')
-        # check if RIGHT is valid
-        if j + 1 <= len(GRID[0]) - 1 and GRID[i][j+1] not in OBSTACLES:
-            total_actions.append('RIGHT')
-        # if agent is on a gas station, add REFILL action
-        if GRID[i][j] == GAS_STATION:
+        # check if has fuel
+        if REMAINING_FUEL > 0:
+            if i - 1 >= 0 and GRID[i-1][j] not in OBSTACLES:  # check if UP is valid
+                total_actions.append('UP')
+            # check if DOWN is valid
+            if i + 1 <= len(GRID) - 1 and GRID[i+1][j] not in OBSTACLES:
+                total_actions.append('DOWN')
+            if j - 1 >= 0 and GRID[i][j-1] not in OBSTACLES:  # check if LEFT is valid
+                total_actions.append('LEFT')
+            # check if RIGHT is valid
+            if j + 1 <= len(GRID[0]) - 1 and GRID[i][j+1] not in OBSTACLES:
+                total_actions.append('RIGHT')
+
+        if GRID[i][j] in IN_GAS_STATION:  # if agent is on a gas station, add REFILL action
             total_actions.append('REFILL')
 
-        print(total_actions)
+        # print(total_actions)
         return random.choice(total_actions)
 
 
