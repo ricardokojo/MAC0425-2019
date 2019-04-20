@@ -12,8 +12,8 @@
     ENTENDO QUE EPS SEM ASSINATURA NAO SERAO CORRIGIDOS E, AINDA ASSIM,
     PODERAO SER PUNIDOS POR DESONESTIDADE ACADEMICA.
 
-    Nome:
-    NUSP:
+    Nome: RICARDO HIDEKI HANGAI KOJO
+    NUSP: 10295429
 
     Referencias: Com excecao das rotinas fornecidas no enunciado e em sala
     de aula, caso voce tenha utilizado alguma referencia, liste-as abaixo
@@ -31,14 +31,49 @@ import util
 # **********************************************************
 # **                    PART 00 START                     **
 # **********************************************************
+
+
 class RandomAgent(util.Agent):
     """ Implements an agent that chooses a random action """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    def _get_player_position(self, grid):
+        # print("{} looking for {}".format(grid, self.player_number))
+        for i in range(len(grid)):
+            # print(grid[i])
+            if self.player_number in grid[i]:
+                return i, grid[i].index(self.player_number)
 
     def get_action(self, perception):
-        total_actions = ['UP', 'RIGHT', 'DOWN', 'LEFT', 'REFILL', 'STOP']
+        total_actions = ['STOP']
+        GAS_STATION = 4
+        OBSTACLES = [1, 2, 5]  # other agent or building
+        GRID = perception[0]
+        # print("{} type {}".format(perception, type(GRID)))
+
+        # get player's position
+        i, j = self._get_player_position(GRID)
+        # print("{} POSITION IS ({}, {})".format(self.player_number, agent_i, agent_j))
+
+        # check if UP is valid
+        if i - 1 >= 0 and GRID[i-1][j] not in OBSTACLES:
+            total_actions.append('UP')
+        # check if DOWN is valid
+        if i + 1 <= len(GRID) - 1 and GRID[i+1][j] not in OBSTACLES:
+            total_actions.append('DOWN')
+        # check if LEFT is valid
+        if j - 1 >= 0 and GRID[i][j-1] not in OBSTACLES:
+            total_actions.append('LEFT')
+        # check if RIGHT is valid
+        if j + 1 <= len(GRID[0]) - 1 and GRID[i][j+1] not in OBSTACLES:
+            total_actions.append('RIGHT')
+        # if agent is on a gas station, add REFILL action
+        if GRID[i][j] == GAS_STATION:
+            total_actions.append('REFILL')
+
+        print(total_actions)
         return random.choice(total_actions)
 
 
@@ -62,6 +97,7 @@ class CollectAllAgent(util.Agent):
         You may use the GetClosestPersonOrRefillAgent as reference for your
         work here
     """
+
     def __init__(self, **kwargs):
         """
         Unless you decide that you need additional attributes, like problem
@@ -69,7 +105,6 @@ class CollectAllAgent(util.Agent):
         are safe to go with the just the line below.
         """
         super().__init__(**kwargs)
-
 
     def get_action(self, perception):
         """ Receives a perception, do a search and returns an action """
@@ -82,25 +117,21 @@ class CollectAllAgentProblem(util.Problem):
     You must at least extend the following methods, but you are free to
     include any other method you see fit.
     """
+
     def __init__(self, grid, initial_state, **kwargs):
         raise NotImplementedError
-
 
     def actions(self, state):
         raise NotImplementedError
 
-
     def initial_state(self):
         raise NotImplementedError
-
 
     def next_state(self, state, action):
         raise NotImplementedError
 
-
     def is_goal_state(self, state):
         raise NotImplementedError
-
 
     def cost(self, state, action):
         raise NotImplementedError
@@ -120,6 +151,7 @@ class AlphaBetaAgent(util.Agent):
     adversarial agent that performs an Alpha/Beta search with cuttoff, where
     the cutoff test is based on the max_depth parameter.
     """
+
     def __init__(self, **kwargs):
         """
         Like some other agents we provided, here we also initialize the
@@ -129,7 +161,6 @@ class AlphaBetaAgent(util.Agent):
         super().__init__(**kwargs)
         self.problem_reference = AlphaBetaAgentProblem
         self.problem = None
-
 
     def __perception_to_state(self, perception):
         """ Converts a perception into a start to be used by the search
@@ -151,7 +182,6 @@ class AlphaBetaAgent(util.Agent):
         state = (grid, self.player_number, remaining_gas, remaining_gas, 0, 0)
         return state
 
-
     def get_action(self, perception):
         """ Receives a perception and returns an action after search """
         self.initial_state = self.__perception_to_state(perception)
@@ -166,6 +196,7 @@ class AlphaBetaAgent(util.Agent):
 
 class AlphaBetaAgentProblem(util.Problem):
     """ Implements the problem class for AlphaBetaAgent """
+
     def __init__(self, state, **kwargs):
         self.__player = kwargs.get('starting_player', 1)
         self.st_gas = kwargs.get('tank_capacity', util.INT_INFTY)
@@ -174,10 +205,8 @@ class AlphaBetaAgentProblem(util.Problem):
         self.init_state = state
         self.eval_fn = kwargs.get('eval_fn', self.evaluation_function)
 
-
     def initial_state(self):
         return self.init_state
-
 
     def cutoff_by_depth(self, _, depth):
         """ Implements the heuristics for cutoff
@@ -188,7 +217,6 @@ class AlphaBetaAgentProblem(util.Problem):
         if depth > self.max_depth:
             return True
         return False
-
 
     @staticmethod
     def __player_pos(state):
@@ -204,7 +232,6 @@ class AlphaBetaAgentProblem(util.Problem):
                 if grid[i][j] in current_player:
                     return (i, j)
         return None
-
 
     def actions(self, state):
         """ Returns a list with all valid actions from that state """
@@ -236,7 +263,6 @@ class AlphaBetaAgentProblem(util.Problem):
         valid.append('STOP')  # STOP is always a valid action
         return valid
 
-
     def next_state(self, state, action):
         """ Implements the transition function T(s,a) """
         # agent_N_remaining_gas = aNg and agent_N_people_bonus = aNp
@@ -255,11 +281,11 @@ class AlphaBetaAgentProblem(util.Problem):
         player_pos = self.__player_pos(state)
         i, j = player_pos
 
-        aux = {'UP'    : [i-1, j],
-               'DOWN'  : [i+1, j],
-               'LEFT'  : [i, j-1],
-               'RIGHT' : [i, j+1],
-               'STOP'  : [i, j],
+        aux = {'UP': [i-1, j],
+               'DOWN': [i+1, j],
+               'LEFT': [i, j-1],
+               'RIGHT': [i, j+1],
+               'STOP': [i, j],
                'REFILL': [i, j]}
 
         if action == 'STOP':
@@ -282,7 +308,6 @@ class AlphaBetaAgentProblem(util.Problem):
                 else:
                     a2g = self.st_gas
                 return (new_grid, 1, a1g, a2g, a1p, a2p)
-
 
         actual_cell = new_grid[i][j]
         future_cell = new_grid[aux[action][0]][aux[action][1]]
@@ -323,7 +348,6 @@ class AlphaBetaAgentProblem(util.Problem):
         else:
             return (new_grid, 1, a1g, a2g-1, a1p, a2p)
 
-
     def __inside_gas_station(self, state):
         """ Auxiliary method to find if a player is inside a gas station """
         grid, _, _, _, _, _ = state
@@ -332,7 +356,6 @@ class AlphaBetaAgentProblem(util.Problem):
         if grid[i][j] > 2:
             return True
         return False
-
 
     def is_goal_state(self, state):
         """ Check if state is goal
@@ -344,8 +367,10 @@ class AlphaBetaAgentProblem(util.Problem):
         # Checking fuel and gas station first
         grid, _, a1g, a2g, a1p, a2p = state
         if a1g == 0 and a2g == 0:
-            a1_in_gas = self.__inside_gas_station((grid, 1, a1g, a2g, a1p, a2p))
-            a2_in_gas = self.__inside_gas_station((grid, 2, a1g, a2g, a1p, a2p))
+            a1_in_gas = self.__inside_gas_station(
+                (grid, 1, a1g, a2g, a1p, a2p))
+            a2_in_gas = self.__inside_gas_station(
+                (grid, 2, a1g, a2g, a1p, a2p))
             if not a1_in_gas and not a2_in_gas:  # Fuel ended and neither in gas
                 return True
         # Checking for people collected
@@ -357,7 +382,6 @@ class AlphaBetaAgentProblem(util.Problem):
         # Outside the for, no person left so it is a goal
         return True
 
-
     def cost(self, state, action):
         # This is not a redundant check because REFILL could be invalid action
         if action not in self.actions(state):
@@ -365,7 +389,6 @@ class AlphaBetaAgentProblem(util.Problem):
         if action in ['REFILL', 'STOP']:
             return 0
         return 1
-
 
     @staticmethod
     def utility(state, player=1):
@@ -429,11 +452,9 @@ class AlphaBetaAgentProblem(util.Problem):
         else:
             return a2p
 
-
     def my_better_evaluation_function(self, state, player=1):
         """ Here you must implement your own evaluation function """
         raise NotImplementedError
-
 
     def alphabeta_search(self, state, depth=0):
         """ Alpha/Beta search using cutoff_test and eval_fn """
@@ -449,7 +470,6 @@ class AlphaBetaAgentProblem(util.Problem):
                 best_action = action
         return best_action
 
-
     def max_value(self, state, alpha, beta, depth):
         """ The Alpha/Beta processing for max internal nodes """
         if self.cutoff_test(state, depth):
@@ -462,7 +482,6 @@ class AlphaBetaAgentProblem(util.Problem):
                 return value
             alpha = max(alpha, value)
         return value
-
 
     def min_value(self, state, alpha, beta, depth):
         """ The Alpha/Beta processing for min internal nodes """
@@ -483,6 +502,7 @@ class AlphaBetaAgentProblem(util.Problem):
 
 # IMPORTANT: You should not need to change anything from this point.
 # Do it at your own risk
+
 
 class GetClosestPersonOrRefillAgent(util.Agent):
     """ Agent Class that implements a planning agent
@@ -506,6 +526,7 @@ class GetClosestPersonOrRefillAgent(util.Agent):
         We cannot ensure that the controller nor the view will continue to
         work if you change those.
     """
+
     def __init__(self, **kwargs):
         """
         As stated before, all information that will be passed during the
@@ -518,7 +539,6 @@ class GetClosestPersonOrRefillAgent(util.Agent):
         super().__init__(**kwargs)
         self.problem_reference = GetClosestPersonOrRefillProblem
         self.problem = None
-
 
     def __state_from_perception(self, perception):
         """ Private method to help to convert a perception into a state
@@ -543,7 +563,6 @@ class GetClosestPersonOrRefillAgent(util.Agent):
                     return ((i, j), remaining_gas)
         return None
 
-
     def start_agent(self, perception, problem, **kwargs):
         """ Initialize all non-default attributes in the agent
 
@@ -557,7 +576,6 @@ class GetClosestPersonOrRefillAgent(util.Agent):
         new_grid = copy.deepcopy(grid)
         self.problem = problem(new_grid, self.initial_state, **kwargs)
 
-
     def manhattan_distance(self, node):
         """ Heuristic to be used by the A* algorithm """
         goals = self.problem.get_people_position()
@@ -568,7 +586,6 @@ class GetClosestPersonOrRefillAgent(util.Agent):
             if manhattan < best_distance:
                 best_distance = manhattan
         return best_distance
-
 
     def get_action(self, perception):
         """ This is the main method for all your agents
@@ -600,6 +617,7 @@ class GetClosestPersonOrRefillProblem(util.Problem):
     For this particular agent it performs an A* search with manhattan distance
     as heuristic.
     """
+
     def __init__(self, grid, initial_state, **kwargs):
         self.grid = copy.deepcopy(grid)
         self.init_state = initial_state
@@ -608,7 +626,6 @@ class GetClosestPersonOrRefillProblem(util.Problem):
         self.people_position = self.__all_people()
         self.tank_capacity = kwargs.get('tank_capacity', util.INT_INFTY)
         self.max_depth = kwargs.get('max_depth', util.MAX_DEPTH)
-
 
     def __process_state(self, state):
         """ Private method that process a given state returning relevant info
@@ -629,7 +646,8 @@ class GetClosestPersonOrRefillProblem(util.Problem):
         i, j = agent_pos
         grid_number = self.grid[i][j]
         if grid_number not in [1, 2, 8, 9]:
-            raise ValueError("There is no player at position: ({0},{1})".format(i, j))
+            raise ValueError(
+                "There is no player at position: ({0},{1})".format(i, j))
         # Fix number in case car is inside gas station
         if grid_number > 2:
             player_number = grid_number - 7
@@ -642,16 +660,13 @@ class GetClosestPersonOrRefillProblem(util.Problem):
         full_info = (agent_pos, player_number, obstacles, remaining_gas)
         return full_info
 
-
     def initial_state(self):
         """ Gets the initial state """
         return self.init_state
 
-
     def get_people_position(self):
         """ Auxiliary method that returns the dictionary of people positions """
         return self.people_position
-
 
     def __all_people(self):
         """ Private method that find all people in the grid returning a dict
@@ -671,7 +686,6 @@ class GetClosestPersonOrRefillProblem(util.Problem):
                 if self.grid[i][j] in people_numbers:
                     people_pos[(i, j)] = self.grid[i][j]
         return people_pos
-
 
     def actions(self, state):
         """ Returns a list of valid actions for a given state """
@@ -694,16 +708,15 @@ class GetClosestPersonOrRefillProblem(util.Problem):
         valid.append('STOP')  # STOP is always a valid action
         return valid
 
-
     def next_state(self, state, action):
         """ Implements the transition function T(s,a) """
         ag_pos, player_number, _, remaining_gas = self.__process_state(state)
         i, j = ag_pos
-        aux = {'UP'    : (i-1, j),
-               'DOWN'  : (i+1, j),
-               'LEFT'  : (i, j-1),
-               'RIGHT' : (i, j+1),
-               'STOP'  : (i, j),
+        aux = {'UP': (i-1, j),
+               'DOWN': (i+1, j),
+               'LEFT': (i, j-1),
+               'RIGHT': (i, j+1),
+               'STOP': (i, j),
                'REFILL': (i, j)}
 
         # Trying to perform invalid action, stay where there and spend fuel
@@ -723,7 +736,6 @@ class GetClosestPersonOrRefillProblem(util.Problem):
             self.grid[new_i][new_j] = player_number
         return (aux[action], remaining_gas - self.cost(state, action))
 
-
     def is_goal_state(self, state):
         """ Check if a given state is goal
 
@@ -734,7 +746,6 @@ class GetClosestPersonOrRefillProblem(util.Problem):
         if ag_pos in self.people_position:
             return True
         return False
-
 
     def cost(self, state, action):
         """ Implements the step cost function
@@ -770,9 +781,9 @@ class RefillOrLeftAgent(util.Agent):
     .. seealso::
         GetClosestPersonOrRefillProblem
     """
+
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
 
     @staticmethod
     def __find_pos(grid, player_number):
@@ -787,7 +798,6 @@ class RefillOrLeftAgent(util.Agent):
                 if grid[i][j] in current_player:
                     return (i, j)
         return None
-
 
     def get_action(self, perception):
         grid, rem_gas = perception
@@ -810,10 +820,10 @@ class DoNothingAgent(util.Agent):
     .. notes::
         Remember that STOP is always a valid action.
     """
+
     def __init__(self, player_number=2, **kwargs):
         super().__init__(player_number=player_number, **kwargs)
         self.initial_state = None
-
 
     def get_action(self, perception):
         return 'STOP'

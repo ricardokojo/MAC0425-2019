@@ -4,7 +4,6 @@ import sys
 #import concurrent.futures
 import signal
 #import time
-import pylint.lint
 import util
 
 try:
@@ -55,48 +54,17 @@ def run_tests():
         file_flag = "w"
     file_results = open("final_result.txt", file_flag)
     final_grades = []  # Grade list (code, p01_01, p01_02, p02, p03)
-    lint_result = pylint.lint.Run(['ep2.py'], exit=False)
-    for k in lint_result.linter.stats["by_module"]:
-        mod_name = k
-    msg_types = lint_result.linter.stats["by_module"][mod_name]
-    msg_names = lint_result.linter.stats['by_msg']
-    if 'global_note' in lint_result.linter.stats:
-        lint_score = lint_result.linter.stats['global_note']
-    else:
-        lint_score = -1000.0
-    file_results.write("******************************\n")
-    file_results.write("Code quality:\n")
-    file_results.write("------------------------------\n")
-    file_results.write("Code grade: {0:.2f}/10.0".format(lint_score))
-    if lint_score < 0:
-        file_results.write("\t(Code has serious problems)\n")
-    elif lint_score < 5.0:
-        file_results.write("\t(Code need some adjustments)\n")
-    elif lint_score < 7.0:
-        file_results.write("\t(Code with reasonably quality)\n")
-    else:
-        file_results.write("\t(Great code quality)\n")
-    file_results.write("------------------------------\n")
-    file_results.write("Standards deviation:\n")
-    for k1, v1 in msg_types.items():
-        file_results.write("{0}:\t{1}\n".format(k1, v1))
-    file_results.write("------------------------------\n")
-    file_results.write("Deviation description:\n")
-    for k2, v2 in msg_names.items():
-        file_results.write("{0}:\t{1}\n".format(k2, v2))
-    file_results.write("******************************\n")
-    file_results.write("Tests:\n")
+    lint_score = -1000
     final_grades.append(lint_score)
 
-    #global_results = 0  # Student's result in all tests for all parts
-    #total_tests_global = 0  # Number of tests performed in all parts
-    #total_tests = 0  # Number of tests in a specific part
+    # global_results = 0  # Student's result in all tests for all parts
+    # total_tests_global = 0  # Number of tests performed in all parts
+    # total_tests = 0  # Number of tests in a specific part
     test_results = 0  # Student's result in that specific
-    #part_tests = 0  # Keep total tests in each part for weighted score
-    #part_correct = 0  # Keep correct in each part for weighted score
+    # part_tests = 0  # Keep total tests in each part for weighted score
+    # part_correct = 0  # Keep correct in each part for weighted score
 
     try:
-        print("Finished pylint analysis")
         print("*************************")
         print("Starting tests:")
         print("Starting Part 00: Test 01")
@@ -143,7 +111,6 @@ def run_tests():
         if final_info['agent1_faults'] == 0:
             test_results += 1
 
-
         print("Finished Part 00: Test 01")
         print("*************************")
         print("Starting Part 00: Test 02")
@@ -176,11 +143,9 @@ def run_tests():
         if final_info['agent1_faults'] == 0:
             test_results += 1
 
-
         print("Finished Part 00: Test 02")
         print("*************************")
         print("Starting Part 00: Test 03")
-
 
         # Test 03
         # Blocked gas [[5,0,5],[5,8,5],[3,9,5]]
@@ -320,8 +285,8 @@ def run_tests():
     finally:
         if len(final_grades) < 2:
             final_grades.append(0.0)
-        file_results.write("Grade in the Test00: {0:.1f}/10.0\n".format(final_grades[1]))
-
+        file_results.write(
+            "Grade in the Test00: {0:.1f}/10.0\n".format(final_grades[1]))
 
     try:
         test_results = 0
@@ -604,19 +569,23 @@ def run_tests():
     finally:
         if len(final_grades) < 3:
             final_grades.append(0.0)
-        file_results.write("Grade in the Test01: {0:.1f}/10.0\n".format(final_grades[2]))
+        file_results.write(
+            "Grade in the Test01: {0:.1f}/10.0\n".format(final_grades[2]))
         file_results.write("------------------------------\n")
         file_results.write("Part02:\n")
         file_results.write("This autograder does not test Part02\n")
-        file_results.write("because we need two instances of AlphaBetaAgent:\n")
+        file_results.write(
+            "because we need two instances of AlphaBetaAgent:\n")
         file_results.write("    -One using evaluation_function\n")
         file_results.write("    -One using my_better_evaluation_function\n")
         file_results.write("In order to test your implementation\n")
-        file_results.write("you should run both instances against GetClosest\n")
+        file_results.write(
+            "you should run both instances against GetClosest\n")
         file_results.write("using different game grids, like the ones\n")
         file_results.write("presented in interesting_grids.txt.\n")
         file_results.write("The agent using my_better should be able to\n")
-        file_results.write("get equal or higher score in most of the examples.")
+        file_results.write(
+            "get equal or higher score in most of the examples.")
 
 
 if __name__ == "__main__":
