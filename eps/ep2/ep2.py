@@ -23,10 +23,15 @@
     - O algoritmo Quicksort foi baseado em:
     https://pt.wikipedia.org/wiki/Quicksort
     http://www.ime.usp.br/~pf/algoritmos/aulas/quick.html
+
+    - https://stackoverflow.com/questions/104420/how-to-generate-all-permutations-of-a-list-in-python
+    - https://www.geeksforgeeks.org/sum-manhattan-distances-pairs-points/
 """
 import copy
 import random
 import util
+
+import itertools
 
 # **********************************************************
 # **                    PART 00 START                     **
@@ -114,10 +119,85 @@ class CollectAllAgent(util.Agent):
         are safe to go with the just the line below.
         """
         super().__init__(**kwargs)
+        self.problem_reference = CollectAllAgentProblem
+        self.problem = None
+    
+    def __state_from_perception(self, perception):
+        """ Copied from GetClosestPersonOrRefillAgent """
+        grid, remaining_gas = perception
+
+        PLAYER_CODES = [self.player_number, self.player_number+7] # Car and car parked on the gas station
+        # PASSENGER_CODES = [3, 6, 7]
+
+        player_pos = None
+        # passengers_pos = {}
+
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if grid[i][j] in PLAYER_CODES:
+                    player_pos = (i, j)
+        return (player_pos, self.player_number, remaining_gas) # [Player position, player number, remaining fuel, list of collected passengers positions, list of all passengers positions]
+
+    def start_agent(self, perception, problem, **kwargs):
+        """ Copied from GetClosestPersonOrRefillAgent """
+        state = self.__state_from_perception(perception)
+        if state[0] == None: # Player isn't in Grid
+            state = None
+
+        self.initial_state = state
+        grid, _ = perception
+        new_grid = copy.deepcopy(grid)
+        self.problem = problem(new_grid, self.initial_state, **kwargs)
+
+    def sum_manhattan_distance(self, node):
+        """ Heuristic to be used by the A* algorithm """
+        state = node.state[0]
+        goals = self.problem.get_passengers_position()
+        best_distance = util.INT_INFTY
+
+        permutations = list(itertools.permutations(goals))
+        if not permutations[0]:
+            return 0
+
+        for i in range(len(permutations)):
+            manhattan = abs(state[0]-permutations[i][0][0])+abs(state[1]-permutations[i][0][1])
+            for j in range(1, len(permutations[0])):
+                manhattan += abs(permutations[i][j-1][0]-permutations[i][j][0])+abs(permutations[i][j-1][1]-permutations[i][j][1])
+            if manhattan < best_distance:
+                best_distance = manhattan
+        return best_distance
+
+    def avg_manhattan_distance(self, node):
+        player_pos = node.state[0]
+        remaining_gas = node.state[2]
+        goals = self.problem.get_passengers_position()
+        if len(goals) == 0:
+            return 0
+
+        manhattan_sum = 0        
+        for passenger in goals:
+            manhattan_sum += abs(player_pos[0]-passenger[0])+abs(player_pos[1]-passenger[1])
+        manhattan_avg = manhattan_sum / len(goals)
+
+        return manhattan_avg
+
+    def return_zero(self, node):
+        return 0
 
     def get_action(self, perception):
         """ Receives a perception, do a search and returns an action """
-        raise NotImplementedError
+        self.start_agent(perception, self.problem_reference,
+                         tank_capacity=self.tank_capacity)
+        node = util.a_star(self.problem, self.avg_manhattan_distance)
+        if not node:  # Search did not find any action
+            return 'STOP'
+        action = node.action
+        last_action = None
+        while node.parent is not None:
+            node = node.parent
+            last_action = action
+            action = node.action
+        return last_action
 
 
 class CollectAllAgentProblem(util.Problem):
@@ -128,22 +208,112 @@ class CollectAllAgentProblem(util.Problem):
     """
 
     def __init__(self, grid, initial_state, **kwargs):
-        raise NotImplementedError
+        self.grid = copy.deepcopy(grid)
+        self.init_state = initial_state
+        self.grid_height = len(self.grid)
+        self.grid_width = len(self.grid[0])
+        self.passengers_pos = self.__get_all_passengers()
+        self.tank_capacity = kwargs.get('tank_capacity', util.INT_INFTY)
+        self.max_depth = kwargs.get('max_depth', util.MAX_DEPTH)
 
     def actions(self, state):
-        raise NotImplementedError
+        """ Returns a list of valid actions for a given state """
+        player_pos, player_number, remaining_gas = state
+        i, j = player_pos
+        gas_station = player_number + 7 # player position + 7
+        OBSTACLES = [2, 5, 9]  # other agent or building
+        if player_number == 2:
+            OBSTACLES = [1, 5, 8]
+
+        valid = []
+        if remaining_gas > 0:
+            if i-1 >= 0 and self.grid[i-1][j] not in OBSTACLES:
+                valid.append('UP')
+            if j+1 < self.grid_width and self.grid[i][j+1] not in OBSTACLES:
+                valid.append('RIGHT')
+            if i+1 < self.grid_height and self.grid[i+1][j] not in OBSTACLES:
+                valid.append('DOWN')
+            if j-1 >= 0 and self.grid[i][j-1] not in OBSTACLES:
+                valid.append('LEFT')
+        if self.grid[i][j] == gas_station:
+            valid.append('REFILL')
+        valid.append('STOP')
+        return valid
 
     def initial_state(self):
-        raise NotImplementedError
+        return self.init_state
 
     def next_state(self, state, action):
-        raise NotImplementedError
+        """ Implements the transition function T(s,a) """
+        player_pos, player_number, remaining_gas = state
+        i, j = player_pos
+
+        aux = {'UP': (i-1, j),
+               'DOWN': (i+1, j),
+               'LEFT': (i, j-1),
+               'RIGHT': (i, j+1),
+               'STOP': (i, j),
+               'REFILL': (i, j)}
+
+        # Trying to perform invalid action, stay where there and spend fuel
+        if action not in self.actions(state):
+            return (aux['STOP'], player_number, remaining_gas - self.cost(state, action))
+        new_i, new_j = aux[action]
+        if action == 'REFILL':
+            if remaining_gas + util.DEFAULT_REFILL > self.tank_capacity:
+                self.grid[new_i][new_j] = player_number + 7
+                return (aux['REFILL'], player_number, self.tank_capacity)
+            else:
+                self.grid[new_i][new_j] = player_number + 7
+                return (aux['REFILL'], player_number, remaining_gas + util.DEFAULT_REFILL)
+        
+        if self.grid[new_i][new_j] == 4:  # Agent going to a gas station
+            self.grid[new_i][new_j] = player_number + 7
+        else: # Agent going to empty position
+            self.grid[new_i][new_j] = player_number
+
+        return (aux[action], player_number, remaining_gas - self.cost(state, action))
 
     def is_goal_state(self, state):
-        raise NotImplementedError
+        """ No gas or no more passengers left"""
+        player_pos, player_number, remaining_gas = state
+        i, j = player_pos
+        gas_station = player_number + 7 # player position + 7
+
+        # Goal if there is no passengers inside the grid
+        if player_pos in self.passengers_pos:
+            return True
+
+        return False
 
     def cost(self, state, action):
-        raise NotImplementedError
+        if action not in self.actions(state):
+            return 1
+        if action in ['REFILL', 'STOP']:
+            return 0
+        return 1
+
+    def get_passengers_position(self):
+        return self.passengers_pos
+    
+    def __get_all_passengers(self):
+        """ Private method that find all people in the grid returning a dict
+
+        Private method to help the identification of goal_state.
+        It find all people inside the grid and returns a dict with indexed
+        by the people coordinate whose value is the people code in the grid.
+
+        :return people_pos: A dictionary with (i,j) coord as index and
+            people code number as value
+        :rtype: <class 'dict'>
+        """
+        passengers_pos = {}
+        PASSENGER_CODES = [3, 6, 7]
+        for i in range(len(self.grid)):
+            for j in range(len(self.grid[0])):
+                if self.grid[i][j] in PASSENGER_CODES:
+                    passengers_pos[(i, j)] = self.grid[i][j]
+        return passengers_pos
 
 
 # **********************************************************
