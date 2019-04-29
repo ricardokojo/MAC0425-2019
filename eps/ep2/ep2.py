@@ -152,7 +152,7 @@ class CollectAllAgent(util.Agent):
     def sum_manhattan_distance(self, node):
         """ Heuristic to be used by the A* algorithm """
         state = node.state[0]
-        goals = self.problem.get_passengers_position()
+        goals = self.problem.get_remaining_passengers()
         best_distance = util.INT_INFTY
 
         permutations = list(itertools.permutations(goals))
@@ -170,16 +170,108 @@ class CollectAllAgent(util.Agent):
     def avg_manhattan_distance(self, node):
         player_pos = node.state[0]
         remaining_gas = node.state[2]
-        goals = self.problem.get_passengers_position()
+        goals = self.problem.get_remaining_passengers()
+        gas_stations = self.problem.get_gas_stations()
         if len(goals) == 0:
             return 0
 
-        manhattan_sum = 0        
+        manhattan_sum = 0
+        manhattan_gs = 0
+        manhattan_gs_min = util.INT_INFTY
         for passenger in goals:
             manhattan_sum += abs(player_pos[0]-passenger[0])+abs(player_pos[1]-passenger[1])
+        for gs in gas_stations:
+            manhattan_gs = abs(player_pos[0]-gs[0])+abs(player_pos[1]-gs[1])
+            if manhattan_gs < manhattan_gs_min:
+                manhattan_gs_min = manhattan_gs
         manhattan_avg = manhattan_sum / len(goals)
 
+        if manhattan_avg > remaining_gas:
+            return manhattan_gs_min
+
         return manhattan_avg
+
+    def manhattan_distance_path(self, node):
+        """ Heuristic to be used by the A* algorithm """
+        player_pos = node.state[0]
+        remaining_gas = copy.deepcopy(node.state[2])
+        goals = copy.deepcopy(self.problem.get_remaining_passengers())
+        if len(goals) == 0:
+            return 0
+
+        manhattan_sum = 0
+        manhattan_min = util.INT_INFTY
+        min_pos = player_pos
+        actual_pos = player_pos
+
+        while(goals):
+            for person_pos in goals:
+                manhattan = abs(actual_pos[0]-person_pos[0])+abs(actual_pos[1]-person_pos[1])
+                if manhattan < manhattan_min:
+                    manhattan_min = manhattan
+                    min_pos = person_pos
+
+            actual_pos = min_pos
+            manhattan_sum += manhattan_min
+            if not goals.pop(actual_pos, False):
+                print("Something wrong happened...")
+            manhattan_min = util.INT_INFTY
+
+        return manhattan_sum
+    
+    def manhattan_distance_path_gas(self, node):
+        """ Heuristic to be used by the A* algorithm """
+        player_pos = node.state[0]
+        remaining_gas = copy.deepcopy(node.state[2])
+        goals = copy.deepcopy(self.problem.get_remaining_passengers())
+        gas_stations = self.problem.get_gas_stations()
+        if len(goals) == 0:
+            return 0
+
+        manhattan_sum = 0
+        manhattan_min = util.INT_INFTY
+        manhattan_gs_min = util.INT_INFTY
+        gs_min_pos = None
+        min_pos = player_pos
+        actual_pos = player_pos
+
+        while (goals):
+            for person_pos in goals:
+                manhattan = abs(actual_pos[0]-person_pos[0])+abs(actual_pos[1]-person_pos[1])
+                if manhattan < manhattan_min:
+                    manhattan_min = manhattan
+                    min_pos = person_pos
+
+            for gs_pos in gas_stations:
+                manhattan = abs(actual_pos[0]-gs_pos[0])+abs(actual_pos[1]-gs_pos[1])
+                if manhattan < manhattan_gs_min:
+                    manhattan_gs_min = manhattan
+                    gs_min_pos = gs_pos
+
+            if manhattan_min > remaining_gas:
+                if (manhattan_min + manhattan_gs_min) > remaining_gas:
+                    manhattan_sum += manhattan_gs_min
+                    actual_pos = gs_min_pos
+                    remaining_gas -= manhattan_gs_min
+                    remaining_gas += util.DEFAULT_REFILL
+                else:
+                    actual_pos = min_pos
+                    manhattan_sum += manhattan_min
+                    remaining_gas -= manhattan_min
+                    if not goals.pop(actual_pos, False):
+                        print("Something wrong happened...")
+            else:
+                actual_pos = min_pos
+                manhattan_sum += manhattan_min
+                remaining_gas -= manhattan_min
+                if not goals.pop(actual_pos, False):
+                    print("Something wrong happened...")
+
+            manhattan_gs_min = util.INT_INFTY
+            manhattan_min = util.INT_INFTY
+
+        print(manhattan_sum)
+        return manhattan_sum
 
     def return_zero(self, node):
         return 0
@@ -188,7 +280,7 @@ class CollectAllAgent(util.Agent):
         """ Receives a perception, do a search and returns an action """
         self.start_agent(perception, self.problem_reference,
                          tank_capacity=self.tank_capacity)
-        node = util.a_star(self.problem, self.avg_manhattan_distance)
+        node = util.a_star(self.problem, self.manhattan_distance_path)
         if not node:  # Search did not find any action
             return 'STOP'
         action = node.action
@@ -212,7 +304,7 @@ class CollectAllAgentProblem(util.Problem):
         self.init_state = initial_state
         self.grid_height = len(self.grid)
         self.grid_width = len(self.grid[0])
-        self.passengers_pos = self.__get_all_passengers()
+        self.gas_stations, self.remaining_passengers = self.__get_all_relevant_position()
         self.tank_capacity = kwargs.get('tank_capacity', util.INT_INFTY)
         self.max_depth = kwargs.get('max_depth', util.MAX_DEPTH)
 
@@ -248,6 +340,8 @@ class CollectAllAgentProblem(util.Problem):
         player_pos, player_number, remaining_gas = state
         i, j = player_pos
 
+        PASSENGER_CODES = [3, 6, 7]
+
         aux = {'UP': (i-1, j),
                'DOWN': (i+1, j),
                'LEFT': (i, j-1),
@@ -267,6 +361,10 @@ class CollectAllAgentProblem(util.Problem):
                 self.grid[new_i][new_j] = player_number + 7
                 return (aux['REFILL'], player_number, remaining_gas + util.DEFAULT_REFILL)
         
+        if self.grid[new_i][new_j] in PASSENGER_CODES:
+            if not self.remaining_passengers.pop((new_i, new_j), False):
+                print("Passenger wasn't found. Something went wrong...")
+            self.grid[new_i][new_j] = player_number
         if self.grid[new_i][new_j] == 4:  # Agent going to a gas station
             self.grid[new_i][new_j] = player_number + 7
         else: # Agent going to empty position
@@ -281,7 +379,7 @@ class CollectAllAgentProblem(util.Problem):
         gas_station = player_number + 7 # player position + 7
 
         # Goal if there is no passengers inside the grid
-        if player_pos in self.passengers_pos:
+        if not self.remaining_passengers:
             return True
 
         return False
@@ -293,10 +391,13 @@ class CollectAllAgentProblem(util.Problem):
             return 0
         return 1
 
-    def get_passengers_position(self):
-        return self.passengers_pos
+    def get_remaining_passengers(self):
+        return self.remaining_passengers
     
-    def __get_all_passengers(self):
+    def get_gas_stations(self):
+        return self.gas_stations
+    
+    def __get_all_relevant_position(self):
         """ Private method that find all people in the grid returning a dict
 
         Private method to help the identification of goal_state.
@@ -308,12 +409,18 @@ class CollectAllAgentProblem(util.Problem):
         :rtype: <class 'dict'>
         """
         passengers_pos = {}
+        gas_stations_pos = {}
+
+        GAS_STATION_CODES = [4, 8, 9]
         PASSENGER_CODES = [3, 6, 7]
         for i in range(len(self.grid)):
             for j in range(len(self.grid[0])):
                 if self.grid[i][j] in PASSENGER_CODES:
                     passengers_pos[(i, j)] = self.grid[i][j]
-        return passengers_pos
+                if self.grid[i][j] in GAS_STATION_CODES:
+                    gas_stations_pos[(i, j)] = self.grid[i][j]
+
+        return gas_stations_pos, passengers_pos
 
 
 # **********************************************************
