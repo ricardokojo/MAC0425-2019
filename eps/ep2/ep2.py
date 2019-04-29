@@ -229,13 +229,15 @@ class CollectAllAgent(util.Agent):
             return 0
 
         manhattan_sum = 0
+
         manhattan_min = util.INT_INFTY
         manhattan_gs_min = util.INT_INFTY
         gs_min_pos = None
+
         min_pos = player_pos
         actual_pos = player_pos
 
-        while (goals):
+        while (goals and remaining_gas > 0):
             for person_pos in goals:
                 manhattan = abs(actual_pos[0]-person_pos[0])+abs(actual_pos[1]-person_pos[1])
                 if manhattan < manhattan_min:
@@ -249,17 +251,13 @@ class CollectAllAgent(util.Agent):
                     gs_min_pos = gs_pos
 
             if manhattan_min > remaining_gas:
-                if (manhattan_min + manhattan_gs_min) > remaining_gas:
+                if manhattan_gs_min > remaining_gas:
+                    return manhattan_sum + remaining_gas
+                else:
                     manhattan_sum += manhattan_gs_min
                     actual_pos = gs_min_pos
                     remaining_gas -= manhattan_gs_min
                     remaining_gas += util.DEFAULT_REFILL
-                else:
-                    actual_pos = min_pos
-                    manhattan_sum += manhattan_min
-                    remaining_gas -= manhattan_min
-                    if not goals.pop(actual_pos, False):
-                        print("Something wrong happened...")
             else:
                 actual_pos = min_pos
                 manhattan_sum += manhattan_min
@@ -270,7 +268,6 @@ class CollectAllAgent(util.Agent):
             manhattan_gs_min = util.INT_INFTY
             manhattan_min = util.INT_INFTY
 
-        print(manhattan_sum)
         return manhattan_sum
 
     def return_zero(self, node):
@@ -280,7 +277,7 @@ class CollectAllAgent(util.Agent):
         """ Receives a perception, do a search and returns an action """
         self.start_agent(perception, self.problem_reference,
                          tank_capacity=self.tank_capacity)
-        node = util.a_star(self.problem, self.manhattan_distance_path)
+        node = util.a_star(self.problem, self.manhattan_distance_path_gas)
         if not node:  # Search did not find any action
             return 'STOP'
         action = node.action
