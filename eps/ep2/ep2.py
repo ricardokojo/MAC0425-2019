@@ -125,18 +125,20 @@ class CollectAllAgent(util.Agent):
     def __state_from_perception(self, perception):
         """ Copied from GetClosestPersonOrRefillAgent """
         grid, remaining_gas = perception
-
+        new_grid = copy.deepcopy(grid)
         PLAYER_CODES = [self.player_number, self.player_number+7] # Car and car parked on the gas station
-        # PASSENGER_CODES = [3, 6, 7]
-
         player_pos = None
-        # passengers_pos = {}
+
+        for i in range(len(new_grid)):
+            new_grid[i] = tuple(new_grid[i])
+        new_grid = tuple(new_grid)
+        
 
         for i in range(len(grid)):
             for j in range(len(grid[0])):
                 if grid[i][j] in PLAYER_CODES:
                     player_pos = (i, j)
-        return (player_pos, self.player_number, remaining_gas) # [Player position, player number, remaining fuel, list of collected passengers positions, list of all passengers positions]
+        return (new_grid, player_pos, self.player_number, remaining_gas) # [Player position, player number, remaining fuel, list of collected passengers positions, list of all passengers positions]
 
     def start_agent(self, perception, problem, **kwargs):
         """ Copied from GetClosestPersonOrRefillAgent """
@@ -168,10 +170,9 @@ class CollectAllAgent(util.Agent):
         return best_distance
 
     def avg_manhattan_distance(self, node):
-        player_pos = node.state[0]
-        remaining_gas = node.state[2]
-        goals = self.problem.get_remaining_passengers()
-        gas_stations = self.problem.get_gas_stations()
+        player_pos = node.state[1]
+        remaining_gas = node.state[3]
+        goals, gas_stations = self.problem.get_all_relevant_position()
         if len(goals) == 0:
             return 0
 
@@ -193,8 +194,8 @@ class CollectAllAgent(util.Agent):
 
     def manhattan_distance_path(self, node):
         """ Heuristic to be used by the A* algorithm """
-        player_pos = node.state[0]
-        remaining_gas = copy.deepcopy(node.state[2])
+        player_pos = node.state[1]
+        remaining_gas = copy.deepcopy(node.state[3])
         goals = copy.deepcopy(self.problem.get_remaining_passengers())
         if len(goals) == 0:
             return 0
@@ -277,7 +278,7 @@ class CollectAllAgent(util.Agent):
         """ Receives a perception, do a search and returns an action """
         self.start_agent(perception, self.problem_reference,
                          tank_capacity=self.tank_capacity)
-        node = util.a_star(self.problem, self.manhattan_distance_path_gas)
+        node = util.a_star(self.problem, self.avg_manhattan_distance)
         if not node:  # Search did not find any action
             return 'STOP'
         action = node.action
@@ -299,45 +300,57 @@ class CollectAllAgentProblem(util.Problem):
     def __init__(self, grid, initial_state, **kwargs):
         self.grid = copy.deepcopy(grid)
         self.init_state = initial_state
-        self.grid_height = len(self.grid)
-        self.grid_width = len(self.grid[0])
-        self.gas_stations, self.remaining_passengers = self.__get_all_relevant_position()
         self.tank_capacity = kwargs.get('tank_capacity', util.INT_INFTY)
         self.max_depth = kwargs.get('max_depth', util.MAX_DEPTH)
 
+    def convert_list_to_tuple(self, li):
+        for i in range(len(li)):
+            li[i] = tuple(li[i])
+        return tuple(li)
+    
+    def convert_tuple_to_list(self, tu):
+        tu = list(tu)
+        for i in range(len(tu)):
+            tu[i] = list(tu[i])
+        return tu
+
+    def initial_state(self):
+        """ Gets the initial state """
+        return self.init_state
+
     def actions(self, state):
         """ Returns a list of valid actions for a given state """
-        player_pos, player_number, remaining_gas = state
-        i, j = player_pos
-        gas_station = player_number + 7 # player position + 7
-        OBSTACLES = [2, 5, 9]  # other agent or building
+        grid, player_position, player_number, remaining_gas = state
+        list_grid = self.convert_tuple_to_list(grid)
+        i, j = player_position
+        gas_station = player_number + 7
+
+        obstacles = [2, 5, 9]
         if player_number == 2:
-            OBSTACLES = [1, 5, 8]
+            OBSTACLES [1, 5, 8]
 
         valid = []
         if remaining_gas > 0:
-            if i-1 >= 0 and self.grid[i-1][j] not in OBSTACLES:
+            if i-1 >= 0 and list_grid[i-1][j] not in obstacles:
                 valid.append('UP')
-            if j+1 < self.grid_width and self.grid[i][j+1] not in OBSTACLES:
+            if j+1 < len(list_grid[0]) and list_grid[i][j+1] not in obstacles:
                 valid.append('RIGHT')
-            if i+1 < self.grid_height and self.grid[i+1][j] not in OBSTACLES:
+            if i+1 < len(list_grid) and list_grid[i+1][j] not in obstacles:
                 valid.append('DOWN')
-            if j-1 >= 0 and self.grid[i][j-1] not in OBSTACLES:
+            if j-1 >= 0 and list_grid[i][j-1] not in obstacles:
                 valid.append('LEFT')
-        if self.grid[i][j] == gas_station:
+        if list_grid[i][j] == gas_station:
             valid.append('REFILL')
-        valid.append('STOP')
+        valid.append('STOP')  # STOP is always a valid action
         return valid
-
-    def initial_state(self):
-        return self.init_state
 
     def next_state(self, state, action):
         """ Implements the transition function T(s,a) """
-        player_pos, player_number, remaining_gas = state
-        i, j = player_pos
-
-        PASSENGER_CODES = [3, 6, 7]
+        grid, player_position, player_number, remaining_gas = state
+        list_grid = self.convert_tuple_to_list(grid)
+        
+        i, j = player_position
+        gas_station = player_number + 7
 
         aux = {'UP': (i-1, j),
                'DOWN': (i+1, j),
@@ -348,53 +361,58 @@ class CollectAllAgentProblem(util.Problem):
 
         # Trying to perform invalid action, stay where there and spend fuel
         if action not in self.actions(state):
-            return (aux['STOP'], player_number, remaining_gas - self.cost(state, action))
+            return (grid, aux['STOP'], player_number, remaining_gas - self.cost(state, action))
         new_i, new_j = aux[action]
         if action == 'REFILL':
             if remaining_gas + util.DEFAULT_REFILL > self.tank_capacity:
-                self.grid[new_i][new_j] = player_number + 7
-                return (aux['REFILL'], player_number, self.tank_capacity)
+                list_grid[new_i][new_j] = gas_station
+                return (self.convert_list_to_tuple(list_grid), aux['REFILL'], player_number, self.tank_capacity)
             else:
-                self.grid[new_i][new_j] = player_number + 7
-                return (aux['REFILL'], player_number, remaining_gas + util.DEFAULT_REFILL)
-        
-        if self.grid[new_i][new_j] in PASSENGER_CODES:
-            if not self.remaining_passengers.pop((new_i, new_j), False):
-                print("Passenger wasn't found. Something went wrong...")
-            self.grid[new_i][new_j] = player_number
-        if self.grid[new_i][new_j] == 4:  # Agent going to a gas station
-            self.grid[new_i][new_j] = player_number + 7
-        else: # Agent going to empty position
-            self.grid[new_i][new_j] = player_number
-
-        return (aux[action], player_number, remaining_gas - self.cost(state, action))
+                list_grid[new_i][new_j] = gas_station
+                return (self.convert_list_to_tuple(list_grid), aux['REFILL'], player_number, remaining_gas + util.DEFAULT_REFILL)
+        if list_grid[new_i][new_j] == 4:  # Agent going to a gas station
+            list_grid[new_i][new_j] = gas_station
+            if list_grid[i][j] == gas_station:
+                list_grid[i][j] = 4
+            else:
+                list_grid[i][j] = 0
+        else:
+            list_grid[new_i][new_j] = player_number
+            if list_grid[i][j] == gas_station:
+                list_grid[i][j] = 4
+            else:
+                list_grid[i][j] = 0
+        return (self.convert_list_to_tuple(list_grid), aux[action], player_number, remaining_gas - self.cost(state, action))
 
     def is_goal_state(self, state):
-        """ No gas or no more passengers left"""
-        player_pos, player_number, remaining_gas = state
-        i, j = player_pos
-        gas_station = player_number + 7 # player position + 7
+        """ Check if a given state is goal
 
-        # Goal if there is no passengers inside the grid
-        if not self.remaining_passengers:
-            return True
-
-        return False
+        For this particular agent, a goal is when the agent reaches any person
+        """
+        grid, _, _, _ = state
+        PASSENGER_CODES = [3, 6, 7]
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if grid[i][j] in PASSENGER_CODES:
+                    return False
+        return True
 
     def cost(self, state, action):
+        """ Implements the step cost function
+
+        Invalid actions have cost of 1
+        STOP and REFILL has cost of 0 and
+        Any other valid action has cost of 1
+        """
+        # Action is a invalid action, has cost of one gas unit
         if action not in self.actions(state):
             return 1
-        if action in ['REFILL', 'STOP']:
+        # Action is valid, but it is a STOP or REFILL action, no cost
+        if action in ['STOP', 'REFILL']:
             return 0
-        return 1
-
-    def get_remaining_passengers(self):
-        return self.remaining_passengers
+        return 1  # All other valid actions has cost 1
     
-    def get_gas_stations(self):
-        return self.gas_stations
-    
-    def __get_all_relevant_position(self):
+    def get_all_relevant_position(self):
         """ Private method that find all people in the grid returning a dict
 
         Private method to help the identification of goal_state.
@@ -405,6 +423,7 @@ class CollectAllAgentProblem(util.Problem):
             people code number as value
         :rtype: <class 'dict'>
         """
+
         passengers_pos = {}
         gas_stations_pos = {}
 
