@@ -482,10 +482,10 @@ class AlphaBetaAgentProblem(util.Problem):
     def __init__(self, state, **kwargs):
         self.__player = kwargs.get('starting_player', 1)
         self.st_gas = kwargs.get('tank_capacity', util.INT_INFTY)
-        self.max_depth = kwargs.get('max_depth', util.MAX_DEPTH)
+        self.max_depth = kwargs.get('max_depth', 2)
         self.cutoff_test = kwargs.get('cutoff_test', self.cutoff_by_depth)
         self.init_state = state
-        self.eval_fn = kwargs.get('eval_fn', self.evaluation_function)
+        self.eval_fn = kwargs.get('eval_fn', self.my_better_evaluation_function)
 
     def initial_state(self):
         return self.init_state
@@ -736,7 +736,45 @@ class AlphaBetaAgentProblem(util.Problem):
 
     def my_better_evaluation_function(self, state, player=1):
         """ Here you must implement your own evaluation function """
-        raise NotImplementedError
+        grid, _, _, _, a1p, _ = state
+        player_pos = None
+        goals = {}
+
+        PLAYER_CODES = [1, 8]
+        PASSENGER_CODES = [3, 6, 7]
+        for i in range(len(grid)): # finds all passenger and player positions
+            for j in range(len(grid[0])):
+                if grid[i][j] in PLAYER_CODES:
+                    player_pos = (i, j)
+                if grid[i][j] in PASSENGER_CODES:
+                    goals[(i, j)] = grid[i][j]
+        
+        if len(goals) == 0: # gives preference to getting last passenger
+            return util.INT_INFTY
+        if player_pos == None: # if player isn't on board, game is invalid
+            return None
+
+        evaluation = 0
+        # gives preference to getting closer to high reward passengers
+        for passenger_pos, passenger_value in goals.items():
+            manhattan = abs(player_pos[0]-passenger_pos[0])+abs(player_pos[1]-passenger_pos[1])
+            evaluation += self.return_bonus(passenger_value) / manhattan
+        # gives preference to collecting a passenger (and increasing points)
+        # evaluation /= len(goals)
+
+        return evaluation + a1p # gives preference to increasing points (and collecting passenger)
+    
+    def return_bonus(self, code):
+        """
+        Helper function for my_better_evaluation_function
+        Returns passenger bonus based on code
+        """
+        if code == 6:
+            return util.PROFESSOR_BONUS
+        elif code == 7:
+            return util.MONITOR_BONUS
+        else:
+            return util.STUDENT_BONUS
 
     def alphabeta_search(self, state, depth=0):
         """ Alpha/Beta search using cutoff_test and eval_fn """
