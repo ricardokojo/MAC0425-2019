@@ -149,10 +149,12 @@ class CollectAllAgent(util.Agent):
         self.initial_state = state
         grid, _ = perception
         new_grid = copy.deepcopy(grid)
-        self.problem = problem(new_grid, self.initial_state, **kwargs)
+        self.problem = problem(self.initial_state, **kwargs)
+
+
+    """ Test heuristics """
 
     def sum_manhattan_distance(self, node):
-        """ Heuristic to be used by the A* algorithm """
         state = node.state[0]
         goals = self.problem.get_remaining_passengers()
         best_distance = util.INT_INFTY
@@ -169,31 +171,7 @@ class CollectAllAgent(util.Agent):
                 best_distance = manhattan
         return best_distance
 
-    def avg_manhattan_distance(self, node):
-        player_pos = node.state[1]
-        remaining_gas = node.state[3]
-        goals, gas_stations = self.problem.get_all_relevant_position()
-        if len(goals) == 0:
-            return 0
-
-        manhattan_sum = 0
-        manhattan_gs = 0
-        manhattan_gs_min = util.INT_INFTY
-        for passenger in goals:
-            manhattan_sum += abs(player_pos[0]-passenger[0])+abs(player_pos[1]-passenger[1])
-        for gs in gas_stations:
-            manhattan_gs = abs(player_pos[0]-gs[0])+abs(player_pos[1]-gs[1])
-            if manhattan_gs < manhattan_gs_min:
-                manhattan_gs_min = manhattan_gs
-        manhattan_avg = manhattan_sum / len(goals)
-
-        if manhattan_avg > remaining_gas:
-            return manhattan_gs_min
-
-        return manhattan_avg
-
     def manhattan_distance_path(self, node):
-        """ Heuristic to be used by the A* algorithm """
         player_pos = node.state[1]
         remaining_gas = copy.deepcopy(node.state[3])
         goals = copy.deepcopy(self.problem.get_remaining_passengers())
@@ -221,7 +199,6 @@ class CollectAllAgent(util.Agent):
         return manhattan_sum
     
     def manhattan_distance_path_gas(self, node):
-        """ Heuristic to be used by the A* algorithm """
         player_pos = node.state[0]
         remaining_gas = copy.deepcopy(node.state[2])
         goals = copy.deepcopy(self.problem.get_remaining_passengers())
@@ -274,8 +251,37 @@ class CollectAllAgent(util.Agent):
     def return_zero(self, node):
         return 0
 
+    def avg_manhattan_distance(self, node):
+        """
+        Chosen heuristic to be used by the A* algorithm
+        It return the average of all manhattan distances to passengers
+        """
+        grid = node.state[0]
+        player_pos = node.state[1]
+        remaining_gas = node.state[3]
+        goals = {}
+
+        PASSENGER_CODES = [3, 6, 7]
+        for i in range(len(grid)):
+            for j in range(len(grid[0])):
+                if grid[i][j] in PASSENGER_CODES:
+                    goals[(i, j)] = grid[i][j]
+
+        if len(goals) == 0:
+            return 0
+
+        manhattan_sum = 0
+        for passenger in goals:
+            manhattan_sum += abs(player_pos[0]-passenger[0])+abs(player_pos[1]-passenger[1])
+        manhattan_avg = manhattan_sum / len(goals)
+
+        return manhattan_avg
+
     def get_action(self, perception):
-        """ Receives a perception, do a search and returns an action """
+        """
+        Copied from GetClosestPersonOrRefillAgent
+        Receives a perception, do a search and returns an action
+        """
         self.start_agent(perception, self.problem_reference,
                          tank_capacity=self.tank_capacity)
         node = util.a_star(self.problem, self.avg_manhattan_distance)
@@ -297,8 +303,7 @@ class CollectAllAgentProblem(util.Problem):
     include any other method you see fit.
     """
 
-    def __init__(self, grid, initial_state, **kwargs):
-        self.grid = copy.deepcopy(grid)
+    def __init__(self, initial_state, **kwargs):
         self.init_state = initial_state
         self.tank_capacity = kwargs.get('tank_capacity', util.INT_INFTY)
         self.max_depth = kwargs.get('max_depth', util.MAX_DEPTH)
@@ -411,32 +416,7 @@ class CollectAllAgentProblem(util.Problem):
         if action in ['STOP', 'REFILL']:
             return 0
         return 1  # All other valid actions has cost 1
-    
-    def get_all_relevant_position(self):
-        """ Private method that find all people in the grid returning a dict
 
-        Private method to help the identification of goal_state.
-        It find all people inside the grid and returns a dict with indexed
-        by the people coordinate whose value is the people code in the grid.
-
-        :return people_pos: A dictionary with (i,j) coord as index and
-            people code number as value
-        :rtype: <class 'dict'>
-        """
-
-        passengers_pos = {}
-        gas_stations_pos = {}
-
-        GAS_STATION_CODES = [4, 8, 9]
-        PASSENGER_CODES = [3, 6, 7]
-        for i in range(len(self.grid)):
-            for j in range(len(self.grid[0])):
-                if self.grid[i][j] in PASSENGER_CODES:
-                    passengers_pos[(i, j)] = self.grid[i][j]
-                if self.grid[i][j] in GAS_STATION_CODES:
-                    gas_stations_pos[(i, j)] = self.grid[i][j]
-
-        return gas_stations_pos, passengers_pos
 
 
 # **********************************************************
