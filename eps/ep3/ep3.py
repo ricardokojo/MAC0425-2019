@@ -13,8 +13,8 @@
   ENTENDO QUE EPS SEM ASSINATURA NAO SERAO CORRIGIDOS E,
   AINDA ASSIM, PODERAO SER PUNIDOS POR DESONESTIDADE ACADEMICA.
 
-  Nome :
-  NUSP :
+  Nome : Ricardo Hideki Hangai Kojo
+  NUSP : 10295429
 
   Referencias: Com excecao das rotinas fornecidas no enunciado
   e em sala de aula, caso voce tenha utilizado alguma referencia,
@@ -32,6 +32,7 @@ import random
 from collections import defaultdict
 import util
 
+import copy
 
 # **********************************************************
 # **            PART 01 Modeling BlackJack                **
@@ -42,6 +43,7 @@ class BlackjackMDP(util.MDP):
     """
     The BlackjackMDP class is a subclass of MDP that models the BlackJack game as a MDP
     """
+
     def __init__(self, cardValues, multiplicity, threshold, peekCost):
         """
         cardValues: list of integers (face values for each card included in the deck)
@@ -87,7 +89,69 @@ class BlackjackMDP(util.MDP):
            don't include that state in the list returned by succAndProbReward.
         """
         # BEGIN_YOUR_CODE
-        raise Exception("Not implemented yet")
+        if action not in self.actions(state):
+            return []
+
+        has_peeked = (state[1] is not None)
+
+        if action == 'Take':
+            # Baralho vazio?
+            if state[2] is None:
+                return [(state, 1, state[0])]
+
+            # Se espiou a carta, retorna um único estado com prob. 1
+            if has_peeked:
+                new_total = state[0] + self.cardValues[state[1]]
+                # Faliu?
+                if new_total > self.threshold:
+                    return [((new_total, None, None), 1, 0)]
+
+                new_deck = list(state[2])
+                new_deck[state[1]] -= 1
+                new_state = (new_total, None, tuple(new_deck))
+                return [(new_state, 1, 0)]
+
+            result = []
+            total_cards = sum(state[2])
+            # Baralho possui apenas 1 carta?
+            if total_cards == 1:
+                new_total = state[0] + self.cardValues[state[2].index(1)]
+
+                return [((new_total, None, None), 1, new_total if new_total <= self.threshold else 0)]
+
+            for index, val in enumerate(state[2]):
+                if val == 0:
+                    continue
+
+                new_total = state[0] + self.cardValues[index]
+                if new_total > self.threshold:
+                    return [((new_total, None, None), 1, 0)]
+                new_deck = list(state[2])
+                new_deck[index] -= 1
+                result.append(((new_total, None, tuple(new_deck)),
+                               new_deck[index]/total_cards, 0))
+            return result
+        elif action == 'Peek':
+            if state[2] is None:
+                return [(state, 1, state[0])]
+
+            if has_peeked:
+                return []
+
+            result = []
+            total_cards = sum(state[2])
+
+            for index, val in enumerate(state[2]):
+                if val == 0:
+                    continue
+                result.append(((state[0], self.cardValues[index], state[2]),
+                               state[2][index]/total_cards, -self.peekCost))
+
+            return result
+        elif action == 'Quit':
+            return [((state[0], None, None), 1, state[0])]
+
+        return []
         # END_YOUR_CODE
 
     def discount(self):
@@ -100,8 +164,10 @@ class BlackjackMDP(util.MDP):
 # **                    PART 02 Value Iteration           **
 # **********************************************************
 
+
 class ValueIteration(util.MDPAlgorithm):
     """ Asynchronous Value iteration algorithm """
+
     def __init__(self):
         self.pi = {}
         self.V = {}
@@ -116,16 +182,18 @@ class ValueIteration(util.MDPAlgorithm):
         The ValueIteration class is a subclass of util.MDPAlgorithm (see util.py).
         """
         mdp.computeStates()
+
         def computeQ(mdp, V, state, action):
             # Return Q(state, action) based on V(state).
-            return sum(prob * (reward + mdp.discount() * V[newState]) \
-                            for newState, prob, reward in mdp.succAndProbReward(state, action))
+            return sum(prob * (reward + mdp.discount() * V[newState])
+                       for newState, prob, reward in mdp.succAndProbReward(state, action))
 
         def computeOptimalPolicy(mdp, V):
             # Return the optimal policy given the values V.
             pi = {}
             for state in mdp.states:
-                pi[state] = max((computeQ(mdp, V, state, action), action) for action in mdp.actions(state))[1]
+                pi[state] = max((computeQ(mdp, V, state, action), action)
+                                for action in mdp.actions(state))[1]
             return pi
         V = defaultdict(float)  # state -> value of state
         # Implement the main loop of Asynchronous Value Iteration Here:
@@ -139,11 +207,15 @@ class ValueIteration(util.MDPAlgorithm):
         self.pi = pi
         self.V = V
 
+
 # First MDP
-MDP1 = BlackjackMDP(cardValues=[1, 5], multiplicity=2, threshold=10, peekCost=1)
+MDP1 = BlackjackMDP(cardValues=[1, 5],
+                    multiplicity=2, threshold=10, peekCost=1)
 
 # Second MDP
-MDP2 = BlackjackMDP(cardValues=[1, 5], multiplicity=2, threshold=15, peekCost=1)
+MDP2 = BlackjackMDP(cardValues=[1, 5],
+                    multiplicity=2, threshold=15, peekCost=1)
+
 
 def peekingMDP():
     """
@@ -169,6 +241,7 @@ class QLearningAlgorithm(util.RLAlgorithm):
     explorationProb: the epsilon value indicating how frequently the policy
     returns a random action
     """
+
     def __init__(self, actions, discount, featureExtractor, explorationProb=0.2):
         self.actions = actions
         self.discount = discount
@@ -214,6 +287,7 @@ class QLearningAlgorithm(util.RLAlgorithm):
         raise Exception("Not implemented yet")
         # END_YOUR_CODE
 
+
 def identityFeatureExtractor(state, action):
     """
     Return a single-element list containing a binary (indicator) feature
@@ -223,12 +297,15 @@ def identityFeatureExtractor(state, action):
     featureValue = 1
     return [(featureKey, featureValue)]
 
+
 # Large test case
-largeMDP = BlackjackMDP(cardValues=[1, 3, 5, 8, 10], multiplicity=3, threshold=40, peekCost=1)
+largeMDP = BlackjackMDP(
+    cardValues=[1, 3, 5, 8, 10], multiplicity=3, threshold=40, peekCost=1)
 
 # **********************************************************
 # **        PART 03-01 Features for Q-Learning             **
 # **********************************************************
+
 
 def blackjackFeatureExtractor(state, action):
     """
