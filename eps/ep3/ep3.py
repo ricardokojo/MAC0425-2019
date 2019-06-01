@@ -25,6 +25,11 @@
   - O algoritmo Quicksort foi baseado em:
   https://pt.wikipedia.org/wiki/Quicksort
   http://www.ime.usp.br/~pf/algoritmos/aulas/quick.html
+
+  Para a parte 2:
+  - https://www.researchgate.net/figure/The-value-iteration-algorithm_fig1_228651086
+  - https://artint.info/html/ArtInt_227.html
+  - Slides da Aula 8 - Iteracao de Valor
 """
 
 import math
@@ -89,69 +94,63 @@ class BlackjackMDP(util.MDP):
            don't include that state in the list returned by succAndProbReward.
         """
         # BEGIN_YOUR_CODE
-        if action not in self.actions(state):
+
+        # Acao invalida ou baralho vazio?
+        if action not in self.actions(state) or state[2] is None:
             return []
 
         has_peeked = (state[1] is not None)
+        result = []
 
         if action == 'Take':
-            # Baralho vazio?
-            if state[2] is None:
-                return [(state, 1, state[0])]
-
-            # Se espiou a carta, retorna um único estado com prob. 1
-            if has_peeked:
-                new_total = state[0] + self.cardValues[state[1]]
-                # Faliu?
-                if new_total > self.threshold:
-                    return [((new_total, None, None), 1, 0)]
-
-                new_deck = list(state[2])
-                new_deck[state[1]] -= 1
-                new_state = (new_total, None, tuple(new_deck))
-                return [(new_state, 1, 0)]
-
-            result = []
             total_cards = sum(state[2])
-            # Baralho possui apenas 1 carta?
+
+            # Se o baralho possui apenas 1 carta, eh estado terminal
             if total_cards == 1:
                 new_total = state[0] + self.cardValues[state[2].index(1)]
+                new_state = (new_total, None, None)
+                reward = new_total if new_total <= self.threshold else 0
+                result.append((new_state, 1, reward))
+            else:
+                # Se espiou a carta, retorna um unico estado com prob. 1
+                if has_peeked:
+                    new_total = state[0] + self.cardValues[state[1]]
+                    new_deck = list(state[2])
+                    new_deck[state[1]] -= 1
+                    new_state = (new_total, None, tuple(new_deck))
+                    result.append((new_state, 1, 0))
+                else:
+                    for index, val in enumerate(state[2]):
+                        if val == 0:
+                            continue
 
-                return [((new_total, None, None), 1, new_total if new_total <= self.threshold else 0)]
+                        new_total = state[0] + self.cardValues[index]
+                        if new_total > self.threshold:
+                            result.append(((new_total, None, None), 1, 0))
+                            continue
+                        prob = state[2][index] / total_cards
+                        new_deck = list(state[2])
+                        new_deck[index] -= 1
+                        result.append(((new_total, None, tuple(new_deck)),
+                                       prob, 0))
 
-            for index, val in enumerate(state[2]):
-                if val == 0:
-                    continue
-
-                new_total = state[0] + self.cardValues[index]
-                if new_total > self.threshold:
-                    return [((new_total, None, None), 1, 0)]
-                new_deck = list(state[2])
-                new_deck[index] -= 1
-                result.append(((new_total, None, tuple(new_deck)),
-                               new_deck[index]/total_cards, 0))
-            return result
         elif action == 'Peek':
-            if state[2] is None:
-                return [(state, 1, state[0])]
+            # se is_peeked == [], nao faz nada e retorna lista de estados vazia
+            if not has_peeked:
+                total_cards = sum(state[2])
+                for index, val in enumerate(state[2]):
+                    if val == 0:
+                        continue
+                    new_state = (state[0], index, state[2])
+                    prob = state[2][index] / total_cards
+                    result.append((new_state, prob, -self.peekCost))
 
-            if has_peeked:
-                return []
-
-            result = []
-            total_cards = sum(state[2])
-
-            for index, val in enumerate(state[2]):
-                if val == 0:
-                    continue
-                result.append(((state[0], self.cardValues[index], state[2]),
-                               state[2][index]/total_cards, -self.peekCost))
-
-            return result
         elif action == 'Quit':
-            return [((state[0], None, None), 1, state[0])]
+            new_state = (state[0], None, None)
+            result.append((new_state, 1, state[0]))
 
-        return []
+        # print('{} {} {}'.format(state, action, result))
+        return result
         # END_YOUR_CODE
 
     def discount(self):
@@ -198,7 +197,6 @@ class ValueIteration(util.MDPAlgorithm):
         V = defaultdict(float)  # state -> value of state
         # Implement the main loop of Asynchronous Value Iteration Here:
         # BEGIN_YOUR_CODE
-        raise Exception("Not implemented yet")
         # END_YOUR_CODE
 
         # Extract the optimal policy now
@@ -315,3 +313,15 @@ def blackjackFeatureExtractor(state, action):
     # BEGIN_YOUR_CODE
     raise Exception("Not implemented yet")
     # END_YOUR_CODE
+
+
+def main():
+    smallMDP = BlackjackMDP(cardValues=[1, 5], multiplicity=2,
+                            threshold=15, peekCost=1)
+    alg = ValueIteration()
+    alg.solve(smallMDP)
+    for _, val in alg.pi.items():
+        print(val)
+
+
+main()
