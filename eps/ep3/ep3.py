@@ -197,6 +197,44 @@ class ValueIteration(util.MDPAlgorithm):
         V = defaultdict(float)  # state -> value of state
         # Implement the main loop of Asynchronous Value Iteration Here:
         # BEGIN_YOUR_CODE
+        V_l = defaultdict(float)
+        converged = False
+
+        # Init V
+        for state in mdp.states:
+            V[state] = 0.0
+
+        while not converged:
+            # Init V_1
+            for state in mdp.states:
+                V_l[state] = -math.inf
+
+            # Calcula valores de Q para V_1
+            for state in mdp.states:
+                for action in mdp.actions(state):
+                    Q = 0
+                    R = 0
+                    for s in mdp.succAndProbReward(state, action):
+                        state_aux = s[0]
+                        prob = s[1]
+                        reward = s[2]
+                        # print(s)
+                        Q += prob * V[state_aux]
+                        R = reward  # se houver mais um item em mdp.succAndProbReward, todos sao zero
+
+                    # Atualiza em V_1
+                    Q += R
+                    # print(Q)
+                    if Q > V_l[state]:
+                        V_l[state] = Q
+            # V_1
+
+            # Verifica se convergiu
+            converged = True
+            for state in mdp.states:
+                if abs(V[state] - V_l[state]) > epsilon:
+                    V[state] = V_l[state]
+                    converged = False
         # END_YOUR_CODE
 
         # Extract the optimal policy now
