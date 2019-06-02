@@ -37,8 +37,6 @@ import random
 from collections import defaultdict
 import util
 
-import copy
-
 # **********************************************************
 # **            PART 01 Modeling BlackJack                **
 # **********************************************************
@@ -199,16 +197,14 @@ class ValueIteration(util.MDPAlgorithm):
         # BEGIN_YOUR_CODE
         V_l = defaultdict(float)
         converged = False
+        NEGATIVE_INFINITY = float("-inf")
 
         # Init V
         for state in mdp.states:
             V[state] = 0.0
+            V_l[state] = NEGATIVE_INFINITY
 
         while not converged:
-            # Init V_1
-            for state in mdp.states:
-                V_l[state] = -math.inf
-
             # Calcula valores de Q para V_1
             for state in mdp.states:
                 for action in mdp.actions(state):
@@ -235,6 +231,10 @@ class ValueIteration(util.MDPAlgorithm):
                 if abs(V[state] - V_l[state]) > epsilon:
                     V[state] = V_l[state]
                     converged = False
+
+            # Reinit V_1
+            for state in mdp.states:
+                V_l[state] = NEGATIVE_INFINITY
         # END_YOUR_CODE
 
         # Extract the optimal policy now
@@ -259,7 +259,16 @@ def peekingMDP():
     optimal action for at least 10% of the states.
     """
     # BEGIN_YOUR_CODE
-    raise Exception("Not implemented yet")
+    THRESHOLD = 20
+    PEEK_COST = 1
+
+    # Valores testados foram retirados da funcao auxiliar checkPart2_2()
+    # Essa funcao verifica cardValues de 2, com valores de 1 ate 50 e multiplicidade de 1 ate 10
+    # Em geral, para os valores mais altos, a porcentagem de PEEK chegava a ate 1/3
+    # Dos valores gerados, escolhi alguns para tested_values
+    tested_values = [[1, 5], [1, 50], [2, 10],
+                     [3, 30], [4, 40], [5, 50], [10, 20]]
+    return BlackjackMDP(cardValues=random.choice(tested_values), multiplicity=10, threshold=THRESHOLD, peekCost=PEEK_COST)
     # END_YOUR_CODE
 
 
@@ -353,12 +362,34 @@ def blackjackFeatureExtractor(state, action):
     # END_YOUR_CODE
 
 
+def checkPart2_2():
+    vi = ValueIteration()
+    # vi.solve(smallMDP)
+
+    peek_cost = 1
+    threshold = 20
+    pairs = []
+    for x in range(1, 51):
+        for y in range(x+1, 51):
+            pairs.append((x, y))
+
+    for p in pairs:
+        for m in range(1, 11):
+            new_mdp = BlackjackMDP(
+                cardValues=[p[0], p[1]], multiplicity=m, threshold=threshold, peekCost=peek_cost)
+            vi.solve(new_mdp)
+            f = len([a for a in vi.pi.values() if a == 'Peek']) / \
+                float(len(vi.pi.values()))
+            if f >= 0.1:
+                print("{} {} {}".format(p, m, f))
+
+
 def main():
     smallMDP = BlackjackMDP(cardValues=[1, 5], multiplicity=2,
                             threshold=15, peekCost=1)
-    alg = ValueIteration()
-    alg.solve(smallMDP)
-    for _, val in alg.pi.items():
+    vi = ValueIteration()
+    vi.solve(smallMDP)
+    for _, val in vi.pi.items():
         print(val)
 
 
