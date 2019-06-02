@@ -30,6 +30,9 @@
   - https://www.researchgate.net/figure/The-value-iteration-algorithm_fig1_228651086
   - https://artint.info/html/ArtInt_227.html
   - Slides da Aula 8 - Iteracao de Valor
+
+  Para a parte 3:
+  - Slides de Aula 9 e 10 - Aprendizado por Reforco
 """
 
 import math
@@ -329,7 +332,17 @@ class QLearningAlgorithm(util.RLAlgorithm):
          HINT: Remember to check if s is a terminal state and s' None.
         """
         # BEGIN_YOUR_CODE
-        raise Exception("Not implemented yet")
+
+        if newState is not None:
+            Q = self.getQ(state, action)
+            alpha = self.getStepSize()
+            gamma = self.discount
+            V = self.getQ(newState, action)
+
+            for key, val in self.featureExtractor(state, action):
+                # Equacao baseada nos slides
+                self.weights[key] += alpha * \
+                    (reward + gamma * V - Q) * val
         # END_YOUR_CODE
 
 
@@ -388,9 +401,15 @@ def main():
     smallMDP = BlackjackMDP(cardValues=[1, 5], multiplicity=2,
                             threshold=15, peekCost=1)
     vi = ValueIteration()
-    vi.solve(smallMDP)
+    vi.solve(MDP1)
     for _, val in vi.pi.items():
         print(val)
+    mdp_1 = QLearningAlgorithm(
+        MDP1.actions, MDP1.discount(), identityFeatureExtractor)
+    # mdp_2 = QLearningAlgorithm(
+    #   MDP2.actions, MDP1.discount(), identityFeatureExtractor)
+
+    print(util.simulate(MDP1, mdp_1, 10, 1000, True))
 
 
 main()
