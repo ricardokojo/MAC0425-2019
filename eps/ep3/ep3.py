@@ -371,7 +371,24 @@ def blackjackFeatureExtractor(state, action):
     (See identityFeatureExtractor() above for a simple example.)
     """
     # BEGIN_YOUR_CODE
-    raise Exception("Not implemented yet")
+    all_features = []
+
+    # Par acao tomada e valor atual
+    all_features.append((action, state[0]))
+    # Cartas restantes para par (valor, acao)
+    remaining = 0
+    if state[2] is not None:
+        remaining = sum(state[2])
+    all_features.append((("REMAINING", state[0], action), remaining))
+    # Prensenca / ausencia de cada valor de carta no baralho
+    if state[2] is not None:
+        for index, val in enumerate(state[2]):
+            all_features.append((index, 0 if val == 0 else 1))
+    # Carta espiada para par (carta espiada, acao tomada)
+    if state[1] is not None:
+        all_features.append((("PEEKED", state[1], action), state[1]))
+
+    return all_features
     # END_YOUR_CODE
 
 
@@ -398,18 +415,21 @@ def checkPart2_2():
 
 
 def main():
-    smallMDP = BlackjackMDP(cardValues=[1, 5], multiplicity=2,
-                            threshold=15, peekCost=1)
-    vi = ValueIteration()
-    vi.solve(MDP1)
-    for _, val in vi.pi.items():
-        print(val)
-    mdp_1 = QLearningAlgorithm(
-        MDP1.actions, MDP1.discount(), identityFeatureExtractor)
+    # smallMDP = BlackjackMDP(cardValues=[1, 5], multiplicity=2,
+    #                        threshold = 15, peekCost = 1)
+    # mdp_1 = QLearningAlgorithm(
+    #    MDP1.actions, MDP1.discount(), identityFeatureExtractor)
     # mdp_2 = QLearningAlgorithm(
     #   MDP2.actions, MDP1.discount(), identityFeatureExtractor)
+    vi = ValueIteration()
+    vi.solve(largeMDP)
+    for _, val in vi.pi.items():
+        print(val)
+    l_mdp_identity = QLearningAlgorithm(
+        largeMDP.actions, largeMDP.discount(), identityFeatureExtractor)
+    l_mdp_blackjack = QLearningAlgorithm(
+        largeMDP.actions, largeMDP.discount(), blackjackFeatureExtractor)
+    print(util.simulate(largeMDP, l_mdp_identity, 10, 30000, True))
+    print(util.simulate(largeMDP, l_mdp_blackjack, 10, 30000, True))
 
-    print(util.simulate(MDP1, mdp_1, 10, 1000, True))
-
-
-main()
+# main()
