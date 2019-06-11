@@ -1,0 +1,49 @@
+******************************
+Code quality:
+------------------------------
+Code grade: 7.09/10.0	(Great code quality)
+------------------------------
+Standards deviation:
+statement:	0
+info:	0
+convention:	48
+refactor:	3
+warning:	1
+error:	0
+fatal:	0
+------------------------------
+Deviation description:
+line-too-long:	2
+invalid-name:	44
+too-many-branches:	1
+arguments-differ:	1
+too-many-locals:	1
+too-few-public-methods:	1
+missing-docstring:	2
+******************************
+Tests:
+------------------------------
+Parte01-01 Modeling MDPs:
+Modeling MDPs:	2/2 correct
+Test concluded without errors
+Grade in the Test01: 10.0/10.0
+------------------------------
+Part02-01 ValueIteration::
+ValueIteration:	1/1 correct
+Test concluded without errors
+Grade in the Test02-01: 10.0/10.0
+------------------------------
+Part02-02 Peeking MDP:
+Peeking MDP:	1/1 correct
+Test concluded without errors
+Grade in the Test02-02: 10.0/10.0
+------------------------------
+Part03-01 QLearningAlgorithm:
+QLearningAlgorithm:	4/4 correct
+Test concluded without errors
+Grade in the Test03-01: 10.0/10.0
+------------------------------
+Part03-02 BlackjackFeatureExtractor:
+BlackjackFeatureExtractor:	0/2 correct
+Test concluded without errors
+Grade in the Test03-02: 0.0/10.0

@@ -296,10 +296,12 @@ def run_tests():
             rl.incorporateFeedback(0, 1, 0, 1)
             if rl.getQ(0, -1)== 0:
                 test_results +=1
+            print(rl.getQ(0, 1))
             if rl.getQ(0, 1) == 0:
                 test_results +=1
         with Timeout(10):
             rl.incorporateFeedback(2, -1, 1, 1)
+            print(rl.getQ(2, -1))
             if rl.getQ(2, -1) == 1:
                 test_results += 1
             if rl.getQ(2, 1) == 0:
