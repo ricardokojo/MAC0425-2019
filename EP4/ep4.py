@@ -1,4 +1,35 @@
+"""
+  AO PREENCHER ESSE CABECALHO COM O MEU NOME E O MEU NUMERO USP,
+  DECLARO QUE SOU A UNICA PESSOA AUTORA E RESPONSAVEL POR ESSE PROGRAMA.
+  TODAS AS PARTES ORIGINAIS DESSE EXERCICIO PROGRAMA (EP) FORAM
+  DESENVOLVIDAS E IMPLEMENTADAS POR MIM SEGUINDO AS INSTRUCOES
+  DESSE EP E, PORTANTO, NAO CONSTITUEM ATO DE DESONESTIDADE ACADEMICA,
+  FALTA DE ETICA OU PLAGIO.
+  DECLARO TAMBEM QUE SOU A PESSOA RESPONSAVEL POR TODAS AS COPIAS
+  DESSE PROGRAMA E QUE NAO DISTRIBUI OU FACILITEI A
+  SUA DISTRIBUICAO. ESTOU CIENTE QUE OS CASOS DE PLAGIO E
+  DESONESTIDADE ACADEMICA SERAO TRATADOS SEGUNDO OS CRITERIOS
+  DIVULGADOS NA PAGINA DA DISCIPLINA.
+  ENTENDO QUE EPS SEM ASSINATURA NAO SERAO CORRIGIDOS E,
+  AINDA ASSIM, PODERAO SER PUNIDOS POR DESONESTIDADE ACADEMICA.
+
+  Nome : Ricardo Hideki Hangai Kojo
+  NUSP : 10295429
+
+  Referencias: Com excecao das rotinas fornecidas no enunciado
+  e em sala de aula, caso voce tenha utilizado alguma referencia,
+  liste-as abaixo para que o seu programa nao seja considerado
+  plagio ou irregular.
+
+  Exemplo:
+  - O algoritmo Quicksort foi baseado em:
+  https://pt.wikipedia.org/wiki/Quicksort
+  http://www.ime.usp.br/~pf/algoritmos/aulas/quick.html
+
+"""
+
 import nn
+
 
 class PerceptronModel(object):
     def __init__(self, dimensions):
@@ -42,12 +73,14 @@ class PerceptronModel(object):
         """
         "*** YOUR CODE HERE ***"
 
+
 class RegressionModel(object):
     """
     A neural network model for approximating a function that maps from real
     numbers to real numbers. The network should be sufficiently large to be able
     to approximate sin(x) on the interval [-2pi, 2pi] to reasonable precision.
     """
+
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
@@ -81,6 +114,7 @@ class RegressionModel(object):
         """
         "*** YOUR CODE HERE ***"
 
+
 class DigitClassificationModel(object):
     """
     A model for handwritten digit classification using the MNIST dataset.
@@ -95,6 +129,7 @@ class DigitClassificationModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
         # Initialize your model parameters here
         "*** YOUR CODE HERE ***"
@@ -136,6 +171,7 @@ class DigitClassificationModel(object):
         """
         "*** YOUR CODE HERE ***"
 
+
 class LanguageIDModel(object):
     """
     A model for language identification at a single-word granularity.
@@ -144,6 +180,7 @@ class LanguageIDModel(object):
     methods here. We recommend that you implement the RegressionModel before
     working on this part of the project.)
     """
+
     def __init__(self):
         # Our dataset contains words from five different languages, and the
         # combined alphabets of the five languages contain a total of 47 unique
