@@ -81,11 +81,7 @@ class PerceptronModel(object):
             converged = True
 
             for x, y in dataset.iterate_once(1):
-                wx = nn.DotProduct(x, w)
-                wxy = nn.DotProduct(wx, y)
-                result = nn.as_scalar(wxy)
-
-                if result <= 0:
+                if self.get_prediction(x) != nn.as_scalar(y):
                     converged = False
                     w.update(x, self.get_prediction(x))
 
@@ -99,7 +95,10 @@ class RegressionModel(object):
 
     def __init__(self):
         # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        self.w1 = nn.Parameter(1, 50)
+        self.b1 = nn.Parameter(1, 50)
+        self.w2 = nn.Parameter(50, 1)
+        self.b2 = nn.Parameter(1, 1)
 
     def run(self, x):
         """
@@ -110,7 +109,13 @@ class RegressionModel(object):
         Returns:
             A node with shape (batch_size x 1) containing predicted y-values
         """
-        "*** YOUR CODE HERE ***"
+        xw1 = nn.Linear(x, self.w1)
+        xw1b1 = nn.AddBias(xw1, self.b1)
+        relu1 = nn.ReLU(xw1b1)
+
+        xw2 = nn.Linear(relu1, self.w2)
+
+        return nn.AddBias(xw2, self.b2)
 
     def get_loss(self, x, y):
         """
@@ -122,13 +127,29 @@ class RegressionModel(object):
                 to be used for training
         Returns: a loss node
         """
-        "*** YOUR CODE HERE ***"
+        return nn.SquareLoss(self.run(x), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
-        "*** YOUR CODE HERE ***"
+        acceptable_loss = False
+        multiplier = 0.05
+
+        while not acceptable_loss:
+            for x, y in dataset.iterate_once(50):
+                loss = self.get_loss(x, y)
+                gradients = nn.gradients(
+                    loss, [self.w1, self.b1, self.w2, self.b2])
+                self.w1.update(gradients[0], multiplier)
+                self.b1.update(gradients[1], multiplier)
+                self.w2.update(gradients[2], multiplier)
+                self.b2.update(gradients[3], multiplier)
+
+            new_loss = self.get_loss(nn.Constant(
+                dataset.x), nn.Constant(dataset.y))
+            if nn.as_scalar(new_loss) < 0.02:
+                acceptable_loss = True
 
 
 class DigitClassificationModel(object):
