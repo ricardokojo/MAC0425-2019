@@ -26,6 +26,9 @@
   https://pt.wikipedia.org/wiki/Quicksort
   http://www.ime.usp.br/~pf/algoritmos/aulas/quick.html
 
+  - Slides de aula
+  - Conversas entre colegas de turma discutindo valores de batch
+  size, learning rate e outras constantes que usaram no EP
 """
 
 import nn
@@ -79,7 +82,6 @@ class PerceptronModel(object):
 
         while not converged:
             converged = True
-
             for x, y in dataset.iterate_once(1):
                 if self.get_prediction(x) != nn.as_scalar(y):
                     converged = False
@@ -169,7 +171,10 @@ class DigitClassificationModel(object):
 
     def __init__(self):
         # Initialize your model parameters here
-        "*** YOUR CODE HERE ***"
+        self.w1 = nn.Parameter(784, 50)
+        self.b1 = nn.Parameter(1, 50)
+        self.w2 = nn.Parameter(50, 10)
+        self.b2 = nn.Parameter(1, 10)
 
     def run(self, x):
         """
@@ -185,7 +190,12 @@ class DigitClassificationModel(object):
             A node with shape (batch_size x 10) containing predicted scores
                 (also called logits)
         """
-        "*** YOUR CODE HERE ***"
+        xw1 = nn.Linear(x, self.w1)
+        xw1b1 = nn.AddBias(xw1, self.b1)
+        relu1 = nn.ReLU(xw1b1)
+
+        xw2 = nn.Linear(relu1, self.w2)
+        return nn.AddBias(xw2, self.b2)
 
     def get_loss(self, x, y):
         """
@@ -200,13 +210,29 @@ class DigitClassificationModel(object):
             y: a node with shape (batch_size x 10)
         Returns: a loss node
         """
-        "*** YOUR CODE HERE ***"
+        return nn.SoftmaxLoss(self.run(x), y)
 
     def train(self, dataset):
         """
         Trains the model.
         """
-        "*** YOUR CODE HERE ***"
+        acceptable_acc = False
+        multiplier = 0.1
+
+        while not acceptable_acc:
+            for x, y in dataset.iterate_once(50):
+                loss = self.get_loss(x, y)
+                gradients = nn.gradients(
+                    loss, [self.w1, self.b1, self.w2, self.b2])
+                self.w1.update(gradients[0], multiplier)
+                self.b1.update(gradients[1], multiplier)
+                self.w2.update(gradients[2], multiplier)
+                self.b2.update(gradients[3], multiplier)
+
+            new_accuracy = dataset.get_validation_accuracy()
+            print(new_accuracy)
+            if new_accuracy >= 0.96:
+                acceptable_acc = True
 
 
 class LanguageIDModel(object):
