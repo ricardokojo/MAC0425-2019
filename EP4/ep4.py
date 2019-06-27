@@ -29,6 +29,8 @@
   - Slides de aula
   - Conversas entre colegas de turma discutindo valores de batch
   size, learning rate e outras constantes que usaram no EP
+  - Video sobre redes neurais, explicando o problema da parte 3:
+  https://www.youtube.com/watch?v=aircAruvnKk
 """
 
 import nn
